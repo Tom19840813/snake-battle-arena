@@ -1,0 +1,430 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake Battle Arena</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(to bottom, #09090b, #18181b);
+            color: #e5e5e5;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+        @media (min-width: 1024px) {
+            .grid {
+                grid-template-columns: 1fr 300px;
+            }
+        }
+        .card {
+            background: rgba(24, 24, 27, 0.5);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(39, 39, 42, 0.8);
+            border-radius: 0.5rem;
+            padding: 1rem;
+        }
+        .leaderboard-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.5rem;
+            margin-bottom: 0.5rem;
+            background: rgba(39, 39, 42, 0.5);
+            border-radius: 0.375rem;
+        }
+        .leaderboard-left {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .rank {
+            width: 1.5rem;
+            height: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(39, 39, 42, 0.8);
+            border-radius: 9999px;
+            font-size: 0.875rem;
+        }
+        .snake-indicator {
+            width: 0.75rem;
+            height: 0.75rem;
+            border-radius: 9999px;
+        }
+        .stats-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+        .stats-label {
+            color: #a1a1aa;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div style="text-align: center; margin-bottom: 2rem; animation: fadeIn 0.5s ease-out;">
+            <span style="display: inline-block; background: rgba(39, 39, 42, 0.5); padding: 0.25rem 1rem; border-radius: 9999px; color: #a1a1aa; font-size: 0.875rem; margin-bottom: 0.75rem;">
+                Autonomous Battle Arena
+            </span>
+            <h1 style="font-size: 2.25rem; font-weight: bold; color: #f4f4f5; margin: 0.5rem 0;">
+                Snake Battle Royale
+            </h1>
+            <p style="color: #a1a1aa;">
+                Watch as 20 AI-powered snakes compete for survival
+            </p>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <canvas id="gameCanvas"></canvas>
+            </div>
+
+            <div style="space-y-4">
+                <div class="card">
+                    <h2 style="font-size: 1.125rem; font-weight: 600; color: #f4f4f5; margin-bottom: 0.75rem;">
+                        Leaderboard
+                    </h2>
+                    <div id="leaderboard"></div>
+                </div>
+
+                <div class="card">
+                    <h2 style="font-size: 1.125rem; font-weight: 600; color: #f4f4f5; margin-bottom: 0.75rem;">
+                        Stats
+                    </h2>
+                    <div class="stats-item">
+                        <span class="stats-label">Active Snakes</span>
+                        <span id="activeSnakes">20</span>
+                    </div>
+                    <div class="stats-item">
+                        <span class="stats-label">Food Items</span>
+                        <span id="foodItems">10</span>
+                    </div>
+                    <div class="stats-item">
+                        <span class="stats-label">Elapsed Time</span>
+                        <span id="elapsedTime">00:00</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Snake class definition
+        class Snake {
+            constructor(startPos, color, gridSize) {
+                this.body = [startPos];
+                this.direction = { x: 0, y: 0 };
+                this.score = 0;
+                this.isAlive = true;
+                this.color = color;
+                this.gridSize = gridSize;
+            }
+
+            think(food, otherSnakes) {
+                if (!this.isAlive) return;
+                let closestFood = this.findClosestFood(food);
+                let newDirection = this.calculateDirection(closestFood);
+                const nextPos = {
+                    x: this.body[0].x + newDirection.x,
+                    y: this.body[0].y + newDirection.y
+                };
+
+                if (this.wouldCollide(nextPos, otherSnakes)) {
+                    const alternatives = [
+                        { x: 1, y: 0 },
+                        { x: -1, y: 0 },
+                        { x: 0, y: 1 },
+                        { x: 0, y: -1 }
+                    ];
+
+                    for (const alt of alternatives) {
+                        const altPos = {
+                            x: this.body[0].x + alt.x,
+                            y: this.body[0].y + alt.y
+                        };
+                        if (!this.wouldCollide(altPos, otherSnakes)) {
+                            newDirection = alt;
+                            break;
+                        }
+                    }
+                }
+
+                this.direction = newDirection;
+            }
+
+            findClosestFood(food) {
+                let closest = food[0];
+                let minDistance = Number.MAX_VALUE;
+
+                food.forEach(f => {
+                    const distance = Math.abs(f.x - this.body[0].x) + Math.abs(f.y - this.body[0].y);
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        closest = f;
+                    }
+                });
+
+                return closest;
+            }
+
+            calculateDirection(target) {
+                const dx = target.x - this.body[0].x;
+                const dy = target.y - this.body[0].y;
+
+                if (Math.abs(dx) > Math.abs(dy)) {
+                    return { x: Math.sign(dx), y: 0 };
+                } else {
+                    return { x: 0, y: Math.sign(dy) };
+                }
+            }
+
+            wouldCollide(nextPos, otherSnakes) {
+                if (
+                    nextPos.x < 0 ||
+                    nextPos.x >= this.gridSize ||
+                    nextPos.y < 0 ||
+                    nextPos.y >= this.gridSize
+                ) {
+                    return true;
+                }
+
+                if (this.body.some(segment => segment.x === nextPos.x && segment.y === nextPos.y)) {
+                    return true;
+                }
+
+                return otherSnakes.some(snake =>
+                    snake.body.some(segment => segment.x === nextPos.x && segment.y === nextPos.y)
+                );
+            }
+
+            move(food) {
+                if (!this.isAlive) return false;
+
+                const newHead = {
+                    x: this.body[0].x + this.direction.x,
+                    y: this.body[0].y + this.direction.y
+                };
+
+                const foodIndex = food.findIndex(f => f.x === newHead.x && f.y === newHead.y);
+                const eating = foodIndex !== -1;
+
+                if (eating) {
+                    this.score += 10;
+                } else {
+                    this.body.pop();
+                }
+
+                this.body.unshift(newHead);
+                return eating;
+            }
+        }
+
+        // Game board class
+        class GameBoard {
+            constructor(canvas, numSnakes = 20) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.gridSize = 40;
+                this.updateInterval = 100;
+                this.lastUpdate = 0;
+                this.startTime = Date.now();
+                
+                this.resize();
+                window.addEventListener('resize', () => this.resize());
+
+                this.snakes = [];
+                this.food = [];
+
+                // Initialize snakes
+                for (let i = 0; i < numSnakes; i++) {
+                    const pos = this.getRandomPosition();
+                    const color = `hsl(${(i * 360) / numSnakes}, 70%, 60%)`;
+                    this.snakes.push(new Snake(pos, color, this.gridSize));
+                }
+
+                // Initialize food
+                for (let i = 0; i < 10; i++) {
+                    this.spawnFood();
+                }
+
+                this.initializeLeaderboard();
+                requestAnimationFrame(() => this.gameLoop());
+            }
+
+            resize() {
+                const size = Math.min(
+                    this.canvas.parentElement.clientWidth,
+                    this.canvas.parentElement.clientHeight,
+                    800
+                );
+                this.canvas.width = size;
+                this.canvas.height = size;
+                this.cellSize = size / this.gridSize;
+            }
+
+            getRandomPosition() {
+                return {
+                    x: Math.floor(Math.random() * this.gridSize),
+                    y: Math.floor(Math.random() * this.gridSize)
+                };
+            }
+
+            spawnFood() {
+                let pos = this.getRandomPosition();
+                while (
+                    this.food.some(f => f.x === pos.x && f.y === pos.y) ||
+                    this.snakes.some(s =>
+                        s.body.some(b => b.x === pos.x && b.y === pos.y)
+                    )
+                ) {
+                    pos = this.getRandomPosition();
+                }
+                this.food.push(pos);
+            }
+
+            initializeLeaderboard() {
+                const leaderboard = document.getElementById('leaderboard');
+                for (let i = 0; i < 5; i++) {
+                    const item = document.createElement('div');
+                    item.className = 'leaderboard-item';
+                    item.innerHTML = `
+                        <div class="leaderboard-left">
+                            <div class="rank">${i + 1}</div>
+                            <div class="snake-indicator" style="background-color: hsl(${(i * 60) % 360}, 70%, 60%)"></div>
+                            <span>Snake ${i + 1}</span>
+                        </div>
+                        <span>0</span>
+                    `;
+                    leaderboard.appendChild(item);
+                }
+            }
+
+            updateLeaderboard() {
+                const topSnakes = [...this.snakes]
+                    .sort((a, b) => b.score - a.score)
+                    .slice(0, 5);
+
+                const leaderboard = document.getElementById('leaderboard');
+                const items = leaderboard.children;
+                for (let i = 0; i < Math.min(5, items.length); i++) {
+                    const scoreElement = items[i].querySelector('span:last-child');
+                    if (scoreElement) {
+                        scoreElement.textContent = topSnakes[i]?.score.toString() || '0';
+                    }
+                }
+            }
+
+            updateStats() {
+                const activeSnakes = document.getElementById('activeSnakes');
+                const foodItems = document.getElementById('foodItems');
+                const elapsedTime = document.getElementById('elapsedTime');
+
+                if (activeSnakes) activeSnakes.textContent = this.snakes.filter(s => s.isAlive).length.toString();
+                if (foodItems) foodItems.textContent = this.food.length.toString();
+                if (elapsedTime) {
+                    const seconds = Math.floor((Date.now() - this.startTime) / 1000);
+                    const minutes = Math.floor(seconds / 60);
+                    const remainingSeconds = seconds % 60;
+                    elapsedTime.textContent = `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+                }
+            }
+
+            update() {
+                const now = performance.now();
+                if (now - this.lastUpdate < this.updateInterval) return;
+                this.lastUpdate = now;
+
+                this.snakes.forEach(snake => {
+                    snake.think(this.food, this.snakes.filter(s => s !== snake));
+                });
+
+                this.snakes.forEach(snake => {
+                    const ate = snake.move(this.food);
+                    if (ate) {
+                        const foodIndex = this.food.findIndex(
+                            f => f.x === snake.body[0].x && f.y === snake.body[0].y
+                        );
+                        this.food.splice(foodIndex, 1);
+                        this.spawnFood();
+                    }
+                });
+
+                this.updateLeaderboard();
+                this.updateStats();
+            }
+
+            draw() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+                // Draw grid
+                this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+                this.ctx.lineWidth = 1;
+                for (let i = 0; i <= this.gridSize; i++) {
+                    const pos = i * this.cellSize;
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(pos, 0);
+                    this.ctx.lineTo(pos, this.canvas.height);
+                    this.ctx.stroke();
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(0, pos);
+                    this.ctx.lineTo(this.canvas.width, pos);
+                    this.ctx.stroke();
+                }
+
+                // Draw food
+                this.food.forEach(f => {
+                    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                    this.ctx.beginPath();
+                    this.ctx.arc(
+                        (f.x + 0.5) * this.cellSize,
+                        (f.y + 0.5) * this.cellSize,
+                        this.cellSize / 4,
+                        0,
+                        Math.PI * 2
+                    );
+                    this.ctx.fill();
+                });
+
+                // Draw snakes
+                this.snakes.forEach(snake => {
+                    if (!snake.isAlive) return;
+
+                    snake.body.forEach((segment, index) => {
+                        const alpha = index === 0 ? 1 : 1 - (index / snake.body.length) * 0.6;
+                        this.ctx.fillStyle = `${snake.color}${Math.floor(alpha * 255).toString(16).padStart(2, '0')}`;
+                        this.ctx.fillRect(
+                            segment.x * this.cellSize,
+                            segment.y * this.cellSize,
+                            this.cellSize,
+                            this.cellSize
+                        );
+                    });
+                });
+            }
+
+            gameLoop() {
+                this.update();
+                this.draw();
+                requestAnimationFrame(() => this.gameLoop());
+            }
+        }
+
+        // Initialize the game
+        const canvas = document.getElementById('gameCanvas');
+        new GameBoard(canvas);
+    </script>
+</body>
+</html>
