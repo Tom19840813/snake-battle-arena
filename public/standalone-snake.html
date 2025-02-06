@@ -346,10 +346,12 @@
                 if (now - this.lastUpdate < this.updateInterval) return;
                 this.lastUpdate = now;
 
+                // Update snake AI
                 this.snakes.forEach(snake => {
                     snake.think(this.food, this.snakes.filter(s => s !== snake));
                 });
 
+                // Move snakes and check for food consumption
                 this.snakes.forEach(snake => {
                     const ate = snake.move(this.food);
                     if (ate) {
@@ -385,7 +387,7 @@
 
                 // Draw food
                 this.food.forEach(f => {
-                    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                    this.ctx.fillStyle = '#ea384c'; // Red color for apples
                     this.ctx.beginPath();
                     this.ctx.arc(
                         (f.x + 0.5) * this.cellSize,
@@ -414,11 +416,11 @@
                 });
             }
 
-            gameLoop() {
+            gameLoop = () => {
                 this.update();
                 this.draw();
-                requestAnimationFrame(() => this.gameLoop());
-            }
+                requestAnimationFrame(this.gameLoop);
+            };
         }
 
         // Initialize the game
