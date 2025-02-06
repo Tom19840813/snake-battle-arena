@@ -1,0 +1,135 @@
+
+export interface Position {
+  x: number;
+  y: number;
+}
+
+export interface Direction {
+  x: number;
+  y: number;
+}
+
+export class Snake {
+  public body: Position[];
+  public direction: Direction;
+  public score: number;
+  public isAlive: boolean;
+  public color: string;
+  private gridSize: number;
+
+  constructor(startPos: Position, color: string, gridSize: number) {
+    this.body = [startPos];
+    this.direction = { x: 0, y: 0 };
+    this.score = 0;
+    this.isAlive = true;
+    this.color = color;
+    this.gridSize = gridSize;
+  }
+
+  think(food: Position[], otherSnakes: Snake[]) {
+    if (!this.isAlive) return;
+
+    // Simple AI: Find closest food and move towards it while avoiding collisions
+    let closestFood = this.findClosestFood(food);
+    let newDirection = this.calculateDirection(closestFood);
+
+    // Check if the new direction would cause a collision
+    const nextPos = {
+      x: this.body[0].x + newDirection.x,
+      y: this.body[0].y + newDirection.y
+    };
+
+    if (this.wouldCollide(nextPos, otherSnakes)) {
+      // Try to find an alternative direction
+      const alternatives = [
+        { x: 1, y: 0 },
+        { x: -1, y: 0 },
+        { x: 0, y: 1 },
+        { x: 0, y: -1 }
+      ];
+
+      for (const alt of alternatives) {
+        const altPos = {
+          x: this.body[0].x + alt.x,
+          y: this.body[0].y + alt.y
+        };
+        if (!this.wouldCollide(altPos, otherSnakes)) {
+          newDirection = alt;
+          break;
+        }
+      }
+    }
+
+    this.direction = newDirection;
+  }
+
+  private findClosestFood(food: Position[]): Position {
+    let closest = food[0];
+    let minDistance = Number.MAX_VALUE;
+
+    food.forEach(f => {
+      const distance = Math.abs(f.x - this.body[0].x) + Math.abs(f.y - this.body[0].y);
+      if (distance < minDistance) {
+        minDistance = distance;
+        closest = f;
+      }
+    });
+
+    return closest;
+  }
+
+  private calculateDirection(target: Position): Direction {
+    const dx = target.x - this.body[0].x;
+    const dy = target.y - this.body[0].y;
+
+    if (Math.abs(dx) > Math.abs(dy)) {
+      return { x: Math.sign(dx), y: 0 };
+    } else {
+      return { x: 0, y: Math.sign(dy) };
+    }
+  }
+
+  private wouldCollide(nextPos: Position, otherSnakes: Snake[]): boolean {
+    // Check walls
+    if (
+      nextPos.x < 0 ||
+      nextPos.x >= this.gridSize ||
+      nextPos.y < 0 ||
+      nextPos.y >= this.gridSize
+    ) {
+      return true;
+    }
+
+    // Check self collision
+    if (this.body.some(segment => segment.x === nextPos.x && segment.y === nextPos.y)) {
+      return true;
+    }
+
+    // Check other snakes
+    return otherSnakes.some(snake =>
+      snake.body.some(segment => segment.x === nextPos.x && segment.y === nextPos.y)
+    );
+  }
+
+  move(food: Position[]): boolean {
+    if (!this.isAlive) return false;
+
+    const newHead = {
+      x: this.body[0].x + this.direction.x,
+      y: this.body[0].y + this.direction.y
+    };
+
+    // Check if eating food
+    const foodIndex = food.findIndex(f => f.x === newHead.x && f.y === newHead.y);
+    const eating = foodIndex !== -1;
+
+    if (eating) {
+      this.score += 10;
+    } else {
+      this.body.pop();
+    }
+
+    this.body.unshift(newHead);
+    return eating;
+  }
+}
