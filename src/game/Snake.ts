@@ -48,6 +48,7 @@ export class Snake {
         { x: 0, y: -1 }
       ];
 
+      let foundSafeDirection = false;
       for (const alt of alternatives) {
         const altPos = {
           x: this.body[0].x + alt.x,
@@ -55,8 +56,15 @@ export class Snake {
         };
         if (!this.wouldCollide(altPos, otherSnakes)) {
           newDirection = alt;
+          foundSafeDirection = true;
           break;
         }
+      }
+
+      // If no safe direction is found, mark snake as dead
+      if (!foundSafeDirection) {
+        this.isAlive = false;
+        return;
       }
     }
 
@@ -100,15 +108,25 @@ export class Snake {
       return true;
     }
 
-    // Check self collision
+    // Check self collision with entire body
     if (this.body.some(segment => segment.x === nextPos.x && segment.y === nextPos.y)) {
       return true;
     }
 
-    // Check other snakes
-    return otherSnakes.some(snake =>
-      snake.body.some(segment => segment.x === nextPos.x && segment.y === nextPos.y)
-    );
+    // Check other snakes collision with entire body
+    return otherSnakes.some(snake => {
+      if (!snake.isAlive) return false;
+      return snake.body.some(segment => {
+        // Check if we would collide with any part of the other snake's body
+        const wouldCollide = segment.x === nextPos.x && segment.y === nextPos.y;
+        
+        // Check if we would cross paths (snake moving in opposite directions)
+        const headToHead = snake.body[0].x === nextPos.x && 
+                          snake.body[0].y === nextPos.y;
+        
+        return wouldCollide || headToHead;
+      });
+    });
   }
 
   move(food: Position[]): boolean {
@@ -133,3 +151,4 @@ export class Snake {
     return eating;
   }
 }
+
