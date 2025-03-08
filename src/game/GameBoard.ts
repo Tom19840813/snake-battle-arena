@@ -10,6 +10,7 @@ export class GameBoard {
   private animationFrame: number;
   private lastUpdate: number;
   private updateInterval: number;
+  private startTime: number;
 
   constructor(ctx: CanvasRenderingContext2D, numSnakes: number = 20) {
     this.ctx = ctx;
@@ -20,6 +21,7 @@ export class GameBoard {
     this.lastUpdate = 0;
     this.updateInterval = 100; // Update every 100ms
     this.animationFrame = 0;
+    this.startTime = Date.now();
 
     // Initialize snakes
     for (let i = 0; i < numSnakes; i++) {
@@ -78,6 +80,9 @@ export class GameBoard {
 
     // Update leaderboard
     this.updateLeaderboard();
+    
+    // Update stats
+    this.updateStats();
   }
 
   private updateLeaderboard() {
@@ -90,10 +95,35 @@ export class GameBoard {
 
     const leaderboardItems = leaderboard.children;
     for (let i = 0; i < Math.min(5, leaderboardItems.length); i++) {
-      const scoreElement = leaderboardItems[i].querySelector('span:last-child');
-      if (scoreElement) {
-        scoreElement.textContent = topSnakes[i]?.score.toString() || '0';
+      const item = leaderboardItems[i];
+      const colorIndicator = item.querySelector('.snake-indicator') as HTMLElement;
+      const scoreElement = item.querySelector('span:last-child');
+      
+      if (scoreElement && colorIndicator && topSnakes[i]) {
+        scoreElement.textContent = topSnakes[i].score.toString();
+        colorIndicator.style.backgroundColor = topSnakes[i].color;
       }
+    }
+  }
+  
+  private updateStats() {
+    const activeSnakes = document.getElementById('activeSnakes');
+    const foodItems = document.getElementById('foodItems');
+    const elapsedTime = document.getElementById('elapsedTime');
+
+    if (activeSnakes) {
+      activeSnakes.textContent = this.snakes.filter(s => s.isAlive).length.toString();
+    }
+    
+    if (foodItems) {
+      foodItems.textContent = this.food.length.toString();
+    }
+    
+    if (elapsedTime) {
+      const seconds = Math.floor((Date.now() - this.startTime) / 1000);
+      const minutes = Math.floor(seconds / 60);
+      const remainingSeconds = seconds % 60;
+      elapsedTime.textContent = `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
     }
   }
 
@@ -118,7 +148,7 @@ export class GameBoard {
 
     // Draw food
     this.food.forEach(f => {
-      this.ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+      this.ctx.fillStyle = '#ea384c'; // Red apple color
       this.ctx.beginPath();
       this.ctx.arc(
         (f.x + 0.5) * this.cellSize,
@@ -130,13 +160,17 @@ export class GameBoard {
       this.ctx.fill();
     });
 
-    // Draw snakes
+    // Draw snakes with their specific colors
     this.snakes.forEach(snake => {
       if (!snake.isAlive) return;
 
       snake.body.forEach((segment, index) => {
+        // Calculate alpha for gradient effect along the snake body
         const alpha = index === 0 ? 1 : 1 - (index / snake.body.length) * 0.6;
-        this.ctx.fillStyle = `${snake.color}${Math.floor(alpha * 255).toString(16).padStart(2, '0')}`;
+        // Use the snake's specific color with proper alpha
+        const alphaHex = Math.floor(alpha * 255).toString(16).padStart(2, '0');
+        this.ctx.fillStyle = `${snake.color}${alphaHex}`;
+        
         this.ctx.fillRect(
           segment.x * this.cellSize,
           segment.y * this.cellSize,
