@@ -36,6 +36,15 @@ const Index = () => {
     };
   }, []);
 
+  // Predefined colors for the snake indicators
+  const snakeColors = [
+    '#FF5252', // Red (Snake 1)
+    '#E6E633', // Yellow (Snake 2)
+    '#4CAF50', // Green (Snake 3)
+    '#26C6DA', // Cyan (Snake 4)
+    '#5C6BC0'  // Blue (Snake 5)
+  ];
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-neutral-950 to-neutral-900 p-6">
       <div className="max-w-6xl mx-auto">
@@ -74,9 +83,10 @@ const Index = () => {
                       <span className="w-6 h-6 flex items-center justify-center rounded-full bg-neutral-700 text-sm text-neutral-300">
                         {i + 1}
                       </span>
-                      <div className="w-3 h-3 rounded-full animate-pulse" style={{
-                        backgroundColor: `hsl(${(i * 60) % 360}, 70%, 60%)`
-                      }} />
+                      <div 
+                        className="w-3 h-3 rounded-full" 
+                        style={{ backgroundColor: snakeColors[i] }}
+                      />
                       <span className="text-neutral-300">Snake {i + 1}</span>
                     </div>
                     <span className="text-neutral-400">0</span>
@@ -92,15 +102,15 @@ const Index = () => {
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-neutral-400">Active Snakes</span>
-                  <span className="text-neutral-200">20</span>
+                  <span id="activeSnakes" className="text-neutral-200">20</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-neutral-400">Food Items</span>
-                  <span className="text-neutral-200">10</span>
+                  <span id="foodItems" className="text-neutral-200">10</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-neutral-400">Elapsed Time</span>
-                  <span className="text-neutral-200">00:00</span>
+                  <span id="elapsedTime" className="text-neutral-200">00:00</span>
                 </div>
               </div>
             </Card>

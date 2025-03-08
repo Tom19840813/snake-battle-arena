@@ -23,10 +23,22 @@ export class GameBoard {
     this.animationFrame = 0;
     this.startTime = Date.now();
 
+    // Predefined colors for the first 5 snakes to match the leaderboard image
+    const predefinedColors = [
+      '#FF5252', // Red (Snake 1)
+      '#E6E633', // Yellow (Snake 2)
+      '#4CAF50', // Green (Snake 3)
+      '#26C6DA', // Cyan (Snake 4)
+      '#5C6BC0'  // Blue (Snake 5)
+    ];
+
     // Initialize snakes
     for (let i = 0; i < numSnakes; i++) {
       const pos = this.getRandomPosition();
-      const color = `hsl(${(i * 360) / numSnakes}, 70%, 60%)`;
+      
+      // Use predefined colors for the first 5 snakes, then generate random colors for the rest
+      const color = i < 5 ? predefinedColors[i] : `hsl(${(i * 360) / numSnakes}, 70%, 60%)`;
+      
       this.snakes.push(new Snake(pos, color, this.gridSize));
     }
 

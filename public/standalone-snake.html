@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -247,10 +248,20 @@
                 this.snakes = [];
                 this.food = [];
 
+                // Predefined colors for the first 5 snakes to match the leaderboard image
+                const predefinedColors = [
+                    '#FF5252', // Red (Snake 1)
+                    '#E6E633', // Yellow (Snake 2)
+                    '#4CAF50', // Green (Snake 3)
+                    '#26C6DA', // Cyan (Snake 4)
+                    '#5C6BC0'  // Blue (Snake 5)
+                ];
+
                 // Initialize snakes
                 for (let i = 0; i < numSnakes; i++) {
                     const pos = this.getRandomPosition();
-                    const color = `hsl(${(i * 360) / numSnakes}, 70%, 60%)`;
+                    // Use predefined colors for the first 5 snakes, then generate random colors for the rest
+                    const color = i < 5 ? predefinedColors[i] : `hsl(${(i * 360) / numSnakes}, 70%, 60%)`;
                     this.snakes.push(new Snake(pos, color, this.gridSize));
                 }
 
@@ -296,13 +307,23 @@
 
             initializeLeaderboard() {
                 const leaderboard = document.getElementById('leaderboard');
+                
+                // Predefined colors for leaderboard indicators
+                const predefinedColors = [
+                    '#FF5252', // Red (Snake 1)
+                    '#E6E633', // Yellow (Snake 2)
+                    '#4CAF50', // Green (Snake 3)
+                    '#26C6DA', // Cyan (Snake 4)
+                    '#5C6BC0'  // Blue (Snake 5)
+                ];
+                
                 for (let i = 0; i < 5; i++) {
                     const item = document.createElement('div');
                     item.className = 'leaderboard-item';
                     item.innerHTML = `
                         <div class="leaderboard-left">
                             <div class="rank">${i + 1}</div>
-                            <div class="snake-indicator" style="background-color: hsl(${(i * 60) % 360}, 70%, 60%)"></div>
+                            <div class="snake-indicator" style="background-color: ${predefinedColors[i]}"></div>
                             <span>Snake ${i + 1}</span>
                         </div>
                         <span>0</span>
@@ -399,13 +420,14 @@
                     this.ctx.fill();
                 });
 
-                // Draw snakes
+                // Draw snakes with proper colors
                 this.snakes.forEach(snake => {
                     if (!snake.isAlive) return;
 
                     snake.body.forEach((segment, index) => {
                         const alpha = index === 0 ? 1 : 1 - (index / snake.body.length) * 0.6;
-                        this.ctx.fillStyle = `${snake.color}${Math.floor(alpha * 255).toString(16).padStart(2, '0')}`;
+                        const alphaHex = Math.floor(alpha * 255).toString(16).padStart(2, '0');
+                        this.ctx.fillStyle = `${snake.color}${alphaHex}`;
                         this.ctx.fillRect(
                             segment.x * this.cellSize,
                             segment.y * this.cellSize,
