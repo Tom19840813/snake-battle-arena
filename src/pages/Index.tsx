@@ -1,13 +1,24 @@
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Snake } from '../game/Snake';
 import { GameBoard } from '../game/GameBoard';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
+interface LeaderboardItem {
+  rank: number;
+  color: string;
+  name: string;
+  score: number;
+}
+
 const Index = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameRef = useRef<GameBoard | null>(null);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardItem[]>([]);
+  const [activeSnakes, setActiveSnakes] = useState<number>(20);
+  const [foodItems, setFoodItems] = useState<number>(10);
+  const [elapsedTime, setElapsedTime] = useState<string>('00:00');
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -28,6 +39,21 @@ const Index = () => {
 
     // Initialize game
     gameRef.current = new GameBoard(ctx, 20);
+    
+    // Set up event listeners for game stats updates
+    gameRef.current.onStatsUpdate = (stats) => {
+      setLeaderboard(stats.topSnakes.map((snake, index) => ({
+        rank: index + 1,
+        color: snake.color,
+        name: `Snake ${index + 1}`,
+        score: snake.score
+      })));
+      
+      setActiveSnakes(stats.activeSnakes);
+      setFoodItems(stats.foodItems);
+      setElapsedTime(stats.elapsedTime);
+    };
+    
     gameRef.current.start();
 
     return () => {
@@ -74,24 +100,46 @@ const Index = () => {
                 Leaderboard
               </h2>
               <div id="leaderboard" className="space-y-2">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center justify-between p-2 rounded-lg bg-neutral-800/50"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="w-6 h-6 flex items-center justify-center rounded-full bg-neutral-700 text-sm text-neutral-300">
-                        {i + 1}
-                      </span>
-                      <div 
-                        className="w-3 h-3 rounded-full" 
-                        style={{ backgroundColor: snakeColors[i] }}
-                      />
-                      <span className="text-neutral-300">Snake {i + 1}</span>
+                {leaderboard.length > 0 ? (
+                  leaderboard.map((item) => (
+                    <div
+                      key={item.rank}
+                      className="flex items-center justify-between p-2 rounded-lg bg-neutral-800/50"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="w-6 h-6 flex items-center justify-center rounded-full bg-neutral-700 text-sm text-neutral-300">
+                          {item.rank}
+                        </span>
+                        <div 
+                          className="w-3 h-3 rounded-full" 
+                          style={{ backgroundColor: item.color }}
+                        />
+                        <span className="text-neutral-300">{item.name}</span>
+                      </div>
+                      <span className="text-neutral-400">{item.score}</span>
                     </div>
-                    <span className="text-neutral-400">0</span>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  // Placeholders while loading
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="flex items-center justify-between p-2 rounded-lg bg-neutral-800/50"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="w-6 h-6 flex items-center justify-center rounded-full bg-neutral-700 text-sm text-neutral-300">
+                          {i + 1}
+                        </span>
+                        <div 
+                          className="w-3 h-3 rounded-full" 
+                          style={{ backgroundColor: snakeColors[i] }}
+                        />
+                        <span className="text-neutral-300">Snake {i + 1}</span>
+                      </div>
+                      <span className="text-neutral-400">0</span>
+                    </div>
+                  ))
+                )}
               </div>
             </Card>
 
@@ -102,15 +150,15 @@ const Index = () => {
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-neutral-400">Active Snakes</span>
-                  <span id="activeSnakes" className="text-neutral-200">20</span>
+                  <span id="activeSnakes" className="text-neutral-200">{activeSnakes}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-neutral-400">Food Items</span>
-                  <span id="foodItems" className="text-neutral-200">10</span>
+                  <span id="foodItems" className="text-neutral-200">{foodItems}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-neutral-400">Elapsed Time</span>
-                  <span id="elapsedTime" className="text-neutral-200">00:00</span>
+                  <span id="elapsedTime" className="text-neutral-200">{elapsedTime}</span>
                 </div>
               </div>
             </Card>

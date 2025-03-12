@@ -1,5 +1,14 @@
-
 import { Snake, Position } from './Snake';
+
+interface GameStats {
+  topSnakes: {
+    color: string;
+    score: number;
+  }[];
+  activeSnakes: number;
+  foodItems: number;
+  elapsedTime: string;
+}
 
 export class GameBoard {
   private ctx: CanvasRenderingContext2D;
@@ -11,6 +20,8 @@ export class GameBoard {
   private lastUpdate: number;
   private updateInterval: number;
   private startTime: number;
+  
+  public onStatsUpdate: ((stats: GameStats) => void) | null = null;
 
   constructor(ctx: CanvasRenderingContext2D, numSnakes: number = 20) {
     this.ctx = ctx;
@@ -23,7 +34,6 @@ export class GameBoard {
     this.animationFrame = 0;
     this.startTime = Date.now();
 
-    // Predefined colors for the first 5 snakes to match the leaderboard image
     const predefinedColors = [
       '#FF5252', // Red (Snake 1)
       '#E6E633', // Yellow (Snake 2)
@@ -32,17 +42,14 @@ export class GameBoard {
       '#5C6BC0'  // Blue (Snake 5)
     ];
 
-    // Initialize snakes
     for (let i = 0; i < numSnakes; i++) {
       const pos = this.getRandomPosition();
       
-      // Use predefined colors for the first 5 snakes, then generate random colors for the rest
       const color = i < 5 ? predefinedColors[i] : `hsl(${(i * 360) / numSnakes}, 70%, 60%)`;
       
       this.snakes.push(new Snake(pos, color, this.gridSize));
     }
 
-    // Initialize food
     for (let i = 0; i < 10; i++) {
       this.spawnFood();
     }
@@ -73,12 +80,10 @@ export class GameBoard {
     if (now - this.lastUpdate < this.updateInterval) return;
     this.lastUpdate = now;
 
-    // Update snake AI
     this.snakes.forEach(snake => {
       snake.think(this.food, this.snakes.filter(s => s !== snake));
     });
 
-    // Move snakes and check for food consumption
     this.snakes.forEach(snake => {
       const ate = snake.move(this.food);
       if (ate) {
@@ -90,52 +95,64 @@ export class GameBoard {
       }
     });
 
-    // Update leaderboard
-    this.updateLeaderboard();
-    
-    // Update stats
     this.updateStats();
   }
 
   private updateLeaderboard() {
-    const leaderboard = document.getElementById('leaderboard');
-    if (!leaderboard) return;
-
     const topSnakes = [...this.snakes]
       .sort((a, b) => b.score - a.score)
       .slice(0, 5);
-
-    const leaderboardItems = leaderboard.children;
-    for (let i = 0; i < Math.min(5, leaderboardItems.length); i++) {
-      const item = leaderboardItems[i];
-      const colorIndicator = item.querySelector('.snake-indicator') as HTMLElement;
-      const scoreElement = item.querySelector('span:last-child');
       
-      if (scoreElement && colorIndicator && topSnakes[i]) {
-        scoreElement.textContent = topSnakes[i].score.toString();
-        colorIndicator.style.backgroundColor = topSnakes[i].color;
+    const leaderboardItems = document.getElementById('leaderboard')?.children;
+    if (leaderboardItems) {
+      for (let i = 0; i < Math.min(5, leaderboardItems.length); i++) {
+        const item = leaderboardItems[i];
+        const scoreElement = item.querySelector('span:last-child');
+        
+        if (scoreElement && topSnakes[i]) {
+          scoreElement.textContent = topSnakes[i].score.toString();
+        }
       }
     }
   }
   
   private updateStats() {
-    const activeSnakes = document.getElementById('activeSnakes');
-    const foodItems = document.getElementById('foodItems');
-    const elapsedTime = document.getElementById('elapsedTime');
+    const seconds = Math.floor((Date.now() - this.startTime) / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    const formattedTime = `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+    
+    const activeSnakesElement = document.getElementById('activeSnakes');
+    const foodItemsElement = document.getElementById('foodItems');
+    const elapsedTimeElement = document.getElementById('elapsedTime');
 
-    if (activeSnakes) {
-      activeSnakes.textContent = this.snakes.filter(s => s.isAlive).length.toString();
+    if (activeSnakesElement) {
+      activeSnakesElement.textContent = this.snakes.filter(s => s.isAlive).length.toString();
     }
     
-    if (foodItems) {
-      foodItems.textContent = this.food.length.toString();
+    if (foodItemsElement) {
+      foodItemsElement.textContent = this.food.length.toString();
     }
     
-    if (elapsedTime) {
-      const seconds = Math.floor((Date.now() - this.startTime) / 1000);
-      const minutes = Math.floor(seconds / 60);
-      const remainingSeconds = seconds % 60;
-      elapsedTime.textContent = `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+    if (elapsedTimeElement) {
+      elapsedTimeElement.textContent = formattedTime;
+    }
+    
+    if (this.onStatsUpdate) {
+      const topSnakes = [...this.snakes]
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 5)
+        .map(snake => ({
+          color: snake.color,
+          score: snake.score
+        }));
+        
+      this.onStatsUpdate({
+        topSnakes,
+        activeSnakes: this.snakes.filter(s => s.isAlive).length,
+        foodItems: this.food.length,
+        elapsedTime: formattedTime
+      });
     }
   }
 
@@ -143,7 +160,6 @@ export class GameBoard {
     const { width, height } = this.ctx.canvas;
     this.ctx.clearRect(0, 0, width, height);
 
-    // Draw grid
     this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
     this.ctx.lineWidth = 1;
     for (let i = 0; i <= this.gridSize; i++) {
@@ -158,9 +174,8 @@ export class GameBoard {
       this.ctx.stroke();
     }
 
-    // Draw food
     this.food.forEach(f => {
-      this.ctx.fillStyle = '#ea384c'; // Red apple color
+      this.ctx.fillStyle = '#ea384c';
       this.ctx.beginPath();
       this.ctx.arc(
         (f.x + 0.5) * this.cellSize,
@@ -172,14 +187,11 @@ export class GameBoard {
       this.ctx.fill();
     });
 
-    // Draw snakes with their specific colors
     this.snakes.forEach(snake => {
       if (!snake.isAlive) return;
 
       snake.body.forEach((segment, index) => {
-        // Calculate alpha for gradient effect along the snake body
         const alpha = index === 0 ? 1 : 1 - (index / snake.body.length) * 0.6;
-        // Use the snake's specific color with proper alpha
         const alphaHex = Math.floor(alpha * 255).toString(16).padStart(2, '0');
         this.ctx.fillStyle = `${snake.color}${alphaHex}`;
         
