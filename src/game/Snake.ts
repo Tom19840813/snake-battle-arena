@@ -16,18 +16,20 @@ export class Snake {
   public isAlive: boolean;
   public color: string;
   private gridSize: number;
+  public isPlayerControlled: boolean;
 
-  constructor(startPos: Position, color: string, gridSize: number) {
+  constructor(startPos: Position, color: string, gridSize: number, isPlayerControlled: boolean = false) {
     this.body = [startPos];
     this.direction = { x: 0, y: 0 };
     this.score = 0;
     this.isAlive = true;
     this.color = color;
     this.gridSize = gridSize;
+    this.isPlayerControlled = isPlayerControlled;
   }
 
   think(food: Position[], otherSnakes: Snake[]) {
-    if (!this.isAlive) return;
+    if (!this.isAlive || this.isPlayerControlled) return;
 
     // Simple AI: Find closest food and move towards it while avoiding collisions
     let closestFood = this.findClosestFood(food);
@@ -68,6 +70,19 @@ export class Snake {
       }
     }
 
+    this.direction = newDirection;
+  }
+
+  setDirection(newDirection: Direction) {
+    // Prevent 180-degree turns
+    if (
+      this.body.length > 1 &&
+      (this.direction.x === -newDirection.x && this.direction.y === 0 && newDirection.y === 0) ||
+      (this.direction.y === -newDirection.y && this.direction.x === 0 && newDirection.x === 0)
+    ) {
+      return;
+    }
+    
     this.direction = newDirection;
   }
 
@@ -151,4 +166,3 @@ export class Snake {
     return eating;
   }
 }
-

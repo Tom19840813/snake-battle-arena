@@ -8,6 +8,7 @@ interface GameStats {
   activeSnakes: number;
   foodItems: number;
   elapsedTime: string;
+  playerScore: number | null;
 }
 
 export class GameBoard {
@@ -20,10 +21,13 @@ export class GameBoard {
   private lastUpdate: number;
   private updateInterval: number;
   private startTime: number;
+  private playerSnake: Snake | null = null;
+  private isPlayerMode: boolean = false;
+  private keyboardListener: ((e: KeyboardEvent) => void) | null = null;
   
   public onStatsUpdate: ((stats: GameStats) => void) | null = null;
 
-  constructor(ctx: CanvasRenderingContext2D, numSnakes: number = 20) {
+  constructor(ctx: CanvasRenderingContext2D, numSnakes: number = 20, isPlayerMode: boolean = false) {
     this.ctx = ctx;
     this.gridSize = 40;
     this.cellSize = ctx.canvas.width / this.gridSize;
@@ -33,6 +37,7 @@ export class GameBoard {
     this.updateInterval = 100; // Update every 100ms
     this.animationFrame = 0;
     this.startTime = Date.now();
+    this.isPlayerMode = isPlayerMode;
 
     const predefinedColors = [
       '#FF5252', // Red (Snake 1)
@@ -42,10 +47,22 @@ export class GameBoard {
       '#5C6BC0'  // Blue (Snake 5)
     ];
 
-    for (let i = 0; i < numSnakes; i++) {
+    if (this.isPlayerMode) {
+      const playerPos = this.getRandomPosition();
+      this.playerSnake = new Snake(playerPos, predefinedColors[0], this.gridSize, true);
+      this.snakes.push(this.playerSnake);
+      
+      this.keyboardListener = this.handleKeyDown.bind(this);
+      window.addEventListener('keydown', this.keyboardListener);
+      this.setupTouchControls();
+    }
+
+    const aiCount = this.isPlayerMode ? numSnakes - 1 : numSnakes;
+    for (let i = 0; i < aiCount; i++) {
       const pos = this.getRandomPosition();
       
-      const color = i < 5 ? predefinedColors[i] : `hsl(${(i * 360) / numSnakes}, 70%, 60%)`;
+      const colorIndex = this.isPlayerMode ? i + 1 : i;
+      const color = colorIndex < 5 ? predefinedColors[colorIndex] : `hsl(${(colorIndex * 360) / numSnakes}, 70%, 60%)`;
       
       this.snakes.push(new Snake(pos, color, this.gridSize));
     }
@@ -53,6 +70,125 @@ export class GameBoard {
     for (let i = 0; i < 10; i++) {
       this.spawnFood();
     }
+  }
+
+  private setupTouchControls() {
+    const canvas = this.ctx.canvas;
+    let startX = 0;
+    let startY = 0;
+    
+    canvas.addEventListener('touchstart', (e) => {
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      e.preventDefault();
+    }, { passive: false });
+    
+    canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+    }, { passive: false });
+    
+    canvas.addEventListener('touchend', (e) => {
+      if (!this.playerSnake || !this.playerSnake.isAlive) return;
+      
+      const endX = e.changedTouches[0].clientX;
+      const endY = e.changedTouches[0].clientY;
+      
+      const deltaX = endX - startX;
+      const deltaY = endY - startY;
+      
+      if (Math.abs(deltaX) > Math.abs(deltaY)) {
+        if (deltaX > 0) {
+          this.playerSnake.setDirection({ x: 1, y: 0 });
+        } else {
+          this.playerSnake.setDirection({ x: -1, y: 0 });
+        }
+      } else {
+        if (deltaY > 0) {
+          this.playerSnake.setDirection({ x: 0, y: 1 });
+        } else {
+          this.playerSnake.setDirection({ x: 0, y: -1 });
+        }
+      }
+      
+      e.preventDefault();
+    }, { passive: false });
+  }
+
+  private handleKeyDown(e: KeyboardEvent) {
+    if (!this.playerSnake || !this.playerSnake.isAlive) return;
+    
+    switch (e.key) {
+      case 'ArrowUp':
+        this.playerSnake.setDirection({ x: 0, y: -1 });
+        e.preventDefault();
+        break;
+      case 'ArrowDown':
+        this.playerSnake.setDirection({ x: 0, y: 1 });
+        e.preventDefault();
+        break;
+      case 'ArrowLeft':
+        this.playerSnake.setDirection({ x: -1, y: 0 });
+        e.preventDefault();
+        break;
+      case 'ArrowRight':
+        this.playerSnake.setDirection({ x: 1, y: 0 });
+        e.preventDefault();
+        break;
+    }
+  }
+  
+  setPlayerMode(isPlayerMode: boolean) {
+    if (this.isPlayerMode === isPlayerMode) return;
+    
+    this.stop();
+    if (this.keyboardListener) {
+      window.removeEventListener('keydown', this.keyboardListener);
+      this.keyboardListener = null;
+    }
+    
+    this.isPlayerMode = isPlayerMode;
+    this.snakes = [];
+    this.food = [];
+    this.lastUpdate = 0;
+    this.startTime = Date.now();
+    
+    const numSnakes = 20;
+    
+    const predefinedColors = [
+      '#FF5252', // Red (Snake 1)
+      '#E6E633', // Yellow (Snake 2)
+      '#4CAF50', // Green (Snake 3)
+      '#26C6DA', // Cyan (Snake 4)
+      '#5C6BC0'  // Blue (Snake 5)
+    ];
+
+    if (this.isPlayerMode) {
+      const playerPos = this.getRandomPosition();
+      this.playerSnake = new Snake(playerPos, predefinedColors[0], this.gridSize, true);
+      this.snakes.push(this.playerSnake);
+      
+      this.keyboardListener = this.handleKeyDown.bind(this);
+      window.addEventListener('keydown', this.keyboardListener);
+      this.setupTouchControls();
+    } else {
+      this.playerSnake = null;
+    }
+    
+    const aiCount = this.isPlayerMode ? numSnakes - 1 : numSnakes;
+    for (let i = 0; i < aiCount; i++) {
+      const pos = this.getRandomPosition();
+      
+      const colorIndex = this.isPlayerMode ? i + 1 : i;
+      const color = colorIndex < 5 ? predefinedColors[colorIndex] : `hsl(${(colorIndex * 360) / numSnakes}, 70%, 60%)`;
+      
+      this.snakes.push(new Snake(pos, color, this.gridSize));
+    }
+
+    for (let i = 0; i < 10; i++) {
+      this.spawnFood();
+    }
+    
+    this.start();
   }
 
   private getRandomPosition(): Position {
@@ -83,6 +219,34 @@ export class GameBoard {
     this.snakes.forEach(snake => {
       snake.think(this.food, this.snakes.filter(s => s !== snake));
     });
+
+    if (this.playerSnake && this.playerSnake.isAlive) {
+      const nextPos = {
+        x: this.playerSnake.body[0].x + this.playerSnake.direction.x,
+        y: this.playerSnake.body[0].y + this.playerSnake.direction.y
+      };
+      
+      if (
+        nextPos.x < 0 ||
+        nextPos.x >= this.gridSize ||
+        nextPos.y < 0 ||
+        nextPos.y >= this.gridSize
+      ) {
+        this.playerSnake.isAlive = false;
+      } 
+      else if (this.playerSnake.body.slice(1).some(segment => 
+        segment.x === nextPos.x && segment.y === nextPos.y
+      )) {
+        this.playerSnake.isAlive = false;
+      }
+      else if (this.snakes.filter(s => s !== this.playerSnake).some(snake => 
+        snake.isAlive && snake.body.some(segment => 
+          segment.x === nextPos.x && segment.y === nextPos.y
+        )
+      )) {
+        this.playerSnake.isAlive = false;
+      }
+    }
 
     this.snakes.forEach(snake => {
       const ate = snake.move(this.food);
@@ -151,7 +315,8 @@ export class GameBoard {
         topSnakes,
         activeSnakes: this.snakes.filter(s => s.isAlive).length,
         foodItems: this.food.length,
-        elapsedTime: formattedTime
+        elapsedTime: formattedTime,
+        playerScore: this.playerSnake?.score || null
       });
     }
   }
