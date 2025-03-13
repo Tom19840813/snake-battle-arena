@@ -17,8 +17,9 @@ export class Snake {
   public color: string;
   private gridSize: number;
   public isPlayerControlled: boolean;
+  public difficulty: number;
 
-  constructor(startPos: Position, color: string, gridSize: number, isPlayerControlled: boolean = false) {
+  constructor(startPos: Position, color: string, gridSize: number, isPlayerControlled: boolean = false, difficulty: number = 1) {
     this.body = [startPos];
     this.direction = { x: 0, y: 0 };
     this.score = 0;
@@ -26,12 +27,24 @@ export class Snake {
     this.color = color;
     this.gridSize = gridSize;
     this.isPlayerControlled = isPlayerControlled;
+    this.difficulty = difficulty;
   }
 
   think(food: Position[], otherSnakes: Snake[]) {
     if (!this.isAlive || this.isPlayerControlled) return;
 
-    // Simple AI: Find closest food and move towards it while avoiding collisions
+    // Different thinking strategies based on difficulty
+    if (this.difficulty === 1) {
+      this.thinkBasic(food, otherSnakes);
+    } else if (this.difficulty === 2) {
+      this.thinkIntermediate(food, otherSnakes);
+    } else {
+      this.thinkAdvanced(food, otherSnakes);
+    }
+  }
+
+  // Basic AI: Just find closest food, minimal obstacle avoidance
+  private thinkBasic(food: Position[], otherSnakes: Snake[]) {
     let closestFood = this.findClosestFood(food);
     let newDirection = this.calculateDirection(closestFood);
 
@@ -71,6 +84,294 @@ export class Snake {
     }
 
     this.direction = newDirection;
+  }
+
+  // Intermediate AI: Looks further ahead to avoid obstacles
+  private thinkIntermediate(food: Position[], otherSnakes: Snake[]) {
+    let closestFood = this.findClosestFood(food);
+    let newDirection = this.calculateDirection(closestFood);
+    
+    // Look 2 steps ahead for collisions
+    const nextPos = {
+      x: this.body[0].x + newDirection.x,
+      y: this.body[0].y + newDirection.y
+    };
+    
+    const twoStepsAhead = {
+      x: nextPos.x + newDirection.x,
+      y: nextPos.y + newDirection.y
+    };
+    
+    // Check current step and two steps ahead
+    if (this.wouldCollide(nextPos, otherSnakes) || this.wouldCollide(twoStepsAhead, otherSnakes)) {
+      // Consider all possible directions and pick the safest
+      const alternatives = [
+        { x: 1, y: 0 },
+        { x: -1, y: 0 },
+        { x: 0, y: 1 },
+        { x: 0, y: -1 }
+      ];
+
+      let bestDirection = null;
+      let maxSafePath = -1;
+      
+      for (const alt of alternatives) {
+        // Skip if it's a 180-degree turn
+        if (alt.x === -this.direction.x && alt.y === -this.direction.y && this.body.length > 1) {
+          continue;
+        }
+        
+        const altPos = {
+          x: this.body[0].x + alt.x,
+          y: this.body[0].y + alt.y
+        };
+        
+        if (!this.wouldCollide(altPos, otherSnakes)) {
+          // Look for how many steps we can go safely
+          let steps = 1;
+          let currentPos = altPos;
+          
+          while (steps < 3) {
+            const nextStepPos = {
+              x: currentPos.x + alt.x,
+              y: currentPos.y + alt.y
+            };
+            
+            if (this.wouldCollide(nextStepPos, otherSnakes)) {
+              break;
+            }
+            
+            currentPos = nextStepPos;
+            steps++;
+          }
+          
+          // Prioritize directions that lead to food
+          const distanceToFood = Math.abs(altPos.x - closestFood.x) + Math.abs(altPos.y - closestFood.y);
+          const safetyScore = steps * 3 - distanceToFood;
+          
+          if (safetyScore > maxSafePath) {
+            maxSafePath = safetyScore;
+            bestDirection = alt;
+          }
+        }
+      }
+      
+      if (bestDirection) {
+        newDirection = bestDirection;
+      } else {
+        // Fall back to basic thinking if no good direction found
+        this.thinkBasic(food, otherSnakes);
+        return;
+      }
+    }
+    
+    this.direction = newDirection;
+  }
+
+  // Advanced AI: Uses more sophisticated path planning, targets food more effectively
+  private thinkAdvanced(food: Position[], otherSnakes: Snake[]) {
+    // Find all food, not just closest
+    const sortedFood = this.findSortedFood(food);
+    
+    if (sortedFood.length === 0) {
+      this.thinkIntermediate(food, otherSnakes);
+      return;
+    }
+    
+    // Consider multiple food options and choose the safest path
+    for (const foodItem of sortedFood.slice(0, 3)) { // Consider top 3 closest food items
+      // Plan a rough path to the food
+      const pathToFood = this.planPathToFood(foodItem, otherSnakes);
+      
+      if (pathToFood.length > 0) {
+        // Use the first step of the path
+        const firstStep = pathToFood[0];
+        this.direction = {
+          x: firstStep.x - this.body[0].x,
+          y: firstStep.y - this.body[0].y
+        };
+        return;
+      }
+    }
+    
+    // If no path found to any food, try to survive
+    // Check all four directions
+    const alternatives = [
+      { x: 1, y: 0 },
+      { x: -1, y: 0 },
+      { x: 0, y: 1 },
+      { x: 0, y: -1 }
+    ];
+    
+    // Filter out the 180-degree turn
+    const validAlternatives = alternatives.filter(alt => 
+      !(alt.x === -this.direction.x && alt.y === -this.direction.y && this.body.length > 1)
+    );
+    
+    // Find direction with most open space
+    let bestDirection = null;
+    let mostOpenSpace = -1;
+    
+    for (const alt of validAlternatives) {
+      const nextPos = {
+        x: this.body[0].x + alt.x,
+        y: this.body[0].y + alt.y
+      };
+      
+      if (!this.wouldCollide(nextPos, otherSnakes)) {
+        const openSpace = this.countOpenSpaces(nextPos, otherSnakes);
+        if (openSpace > mostOpenSpace) {
+          mostOpenSpace = openSpace;
+          bestDirection = alt;
+        }
+      }
+    }
+    
+    if (bestDirection) {
+      this.direction = bestDirection;
+    } else {
+      // Fall back to intermediate thinking if no good direction found
+      this.thinkIntermediate(food, otherSnakes);
+    }
+  }
+  
+  // Count open spaces in a flood fill manner
+  private countOpenSpaces(pos: Position, otherSnakes: Snake[], maxCount: number = 30): number {
+    const visited = new Set<string>();
+    const toVisit: Position[] = [pos];
+    
+    while (toVisit.length > 0 && visited.size < maxCount) {
+      const current = toVisit.shift()!;
+      const key = `${current.x},${current.y}`;
+      
+      if (visited.has(key)) continue;
+      
+      // Check boundaries and collisions
+      if (
+        current.x < 0 || current.x >= this.gridSize ||
+        current.y < 0 || current.y >= this.gridSize ||
+        this.body.some(segment => segment.x === current.x && segment.y === current.y) ||
+        otherSnakes.some(snake => 
+          snake.isAlive && snake.body.some(segment => 
+            segment.x === current.x && segment.y === current.y
+          )
+        )
+      ) {
+        continue;
+      }
+      
+      visited.add(key);
+      
+      // Add adjacent positions
+      toVisit.push({ x: current.x + 1, y: current.y });
+      toVisit.push({ x: current.x - 1, y: current.y });
+      toVisit.push({ x: current.x, y: current.y + 1 });
+      toVisit.push({ x: current.x, y: current.y - 1 });
+    }
+    
+    return visited.size;
+  }
+  
+  private planPathToFood(target: Position, otherSnakes: Snake[]): Position[] {
+    // Simple A* pathfinding implementation
+    const start = this.body[0];
+    const openSet: Position[] = [start];
+    const cameFrom = new Map<string, Position>();
+    
+    const gScore = new Map<string, number>();
+    const fScore = new Map<string, number>();
+    
+    const posKey = (pos: Position) => `${pos.x},${pos.y}`;
+    
+    gScore.set(posKey(start), 0);
+    fScore.set(posKey(start), this.manhattanDistance(start, target));
+    
+    const maxIterations = 100; // Prevent long pathfinding operations
+    let iterations = 0;
+    
+    while (openSet.length > 0 && iterations < maxIterations) {
+      iterations++;
+      
+      // Find position with lowest fScore
+      let current = openSet[0];
+      let lowestFScore = fScore.get(posKey(current)) || Infinity;
+      
+      for (let i = 1; i < openSet.length; i++) {
+        const fScoreI = fScore.get(posKey(openSet[i])) || Infinity;
+        if (fScoreI < lowestFScore) {
+          lowestFScore = fScoreI;
+          current = openSet[i];
+        }
+      }
+      
+      // Check if we reached the target
+      if (current.x === target.x && current.y === target.y) {
+        // Reconstruct path
+        const path = [current];
+        let currentKey = posKey(current);
+        
+        while (cameFrom.has(currentKey)) {
+          current = cameFrom.get(currentKey)!;
+          path.unshift(current);
+          currentKey = posKey(current);
+        }
+        
+        // Return path without the starting position
+        return path.slice(1);
+      }
+      
+      // Remove current from openSet
+      openSet.splice(openSet.indexOf(current), 1);
+      
+      // Consider neighbors
+      const neighbors = [
+        { x: current.x + 1, y: current.y },
+        { x: current.x - 1, y: current.y },
+        { x: current.x, y: current.y + 1 },
+        { x: current.x, y: current.y - 1 }
+      ];
+      
+      for (const neighbor of neighbors) {
+        // Check boundaries and collisions
+        if (
+          neighbor.x < 0 || neighbor.x >= this.gridSize ||
+          neighbor.y < 0 || neighbor.y >= this.gridSize ||
+          this.wouldCollide(neighbor, otherSnakes)
+        ) {
+          continue;
+        }
+        
+        // Calculate tentative gScore
+        const tentativeGScore = (gScore.get(posKey(current)) || Infinity) + 1;
+        
+        if (tentativeGScore < (gScore.get(posKey(neighbor)) || Infinity)) {
+          // This path is better
+          cameFrom.set(posKey(neighbor), current);
+          gScore.set(posKey(neighbor), tentativeGScore);
+          fScore.set(posKey(neighbor), tentativeGScore + this.manhattanDistance(neighbor, target));
+          
+          // Add to openSet if not there
+          if (!openSet.some(pos => pos.x === neighbor.x && pos.y === neighbor.y)) {
+            openSet.push(neighbor);
+          }
+        }
+      }
+    }
+    
+    // No path found
+    return [];
+  }
+  
+  private findSortedFood(food: Position[]): Position[] {
+    return [...food].sort((a, b) => {
+      const distA = this.manhattanDistance(this.body[0], a);
+      const distB = this.manhattanDistance(this.body[0], b);
+      return distA - distB;
+    });
+  }
+  
+  private manhattanDistance(a: Position, b: Position): number {
+    return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
   }
 
   setDirection(newDirection: Direction) {

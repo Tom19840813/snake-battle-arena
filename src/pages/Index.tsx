@@ -23,6 +23,7 @@ const Index = () => {
   const [playerMode, setPlayerMode] = useState<boolean>(false);
   const [playerScore, setPlayerScore] = useState<number | null>(null);
   const [gameOver, setGameOver] = useState<boolean>(false);
+  const [difficulty, setDifficulty] = useState<number>(1);
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -42,7 +43,7 @@ const Index = () => {
     window.addEventListener('resize', updateCanvasSize);
 
     // Initialize game
-    gameRef.current = new GameBoard(ctx, 20, playerMode);
+    gameRef.current = new GameBoard(ctx, 20, playerMode, difficulty);
     
     // Set up event listeners for game stats updates
     gameRef.current.onStatsUpdate = (stats) => {
@@ -56,6 +57,7 @@ const Index = () => {
       setActiveSnakes(stats.activeSnakes);
       setFoodItems(stats.foodItems);
       setElapsedTime(stats.elapsedTime);
+      setDifficulty(stats.difficulty);
       
       if (stats.playerScore !== null) {
         setPlayerScore(stats.playerScore);
@@ -100,6 +102,15 @@ const Index = () => {
     '#26C6DA', // Cyan (Snake 4)
     '#5C6BC0'  // Blue (Snake 5)
   ];
+
+  const getDifficultyLabel = (level: number) => {
+    switch (level) {
+      case 1: return "Easy";
+      case 2: return "Medium";
+      case 3: return "Hard";
+      default: return "Easy";
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-neutral-950 to-neutral-900 p-6">
@@ -149,8 +160,17 @@ const Index = () => {
             )}
             
             {playerMode && !gameOver && (
-              <div className="absolute top-6 left-6 px-4 py-2 bg-black/70 rounded-full">
+              <div className="absolute top-6 left-6 px-4 py-2 bg-black/70 rounded-full flex items-center gap-2">
                 <span className="text-white font-semibold">Score: {playerScore || 0}</span>
+                <div className="w-1 h-6 bg-neutral-600 rounded-full mx-1"></div>
+                <span className={cn(
+                  "text-sm px-2 py-0.5 rounded-md font-medium",
+                  difficulty === 1 ? "bg-green-600/70 text-green-100" :
+                  difficulty === 2 ? "bg-yellow-600/70 text-yellow-100" :
+                  "bg-red-600/70 text-red-100"
+                )}>
+                  {getDifficultyLabel(difficulty)}
+                </span>
               </div>
             )}
             
@@ -239,6 +259,19 @@ const Index = () => {
                   <span className="text-neutral-400">Elapsed Time</span>
                   <span id="elapsedTime" className="text-neutral-200">{elapsedTime}</span>
                 </div>
+                {playerMode && (
+                  <div className="flex justify-between">
+                    <span className="text-neutral-400">Difficulty</span>
+                    <span className={cn(
+                      "px-2 py-0.5 rounded-md text-sm font-medium",
+                      difficulty === 1 ? "bg-green-600/70 text-green-100" :
+                      difficulty === 2 ? "bg-yellow-600/70 text-yellow-100" :
+                      "bg-red-600/70 text-red-100"
+                    )}>
+                      {getDifficultyLabel(difficulty)}
+                    </span>
+                  </div>
+                )}
               </div>
             </Card>
           </div>

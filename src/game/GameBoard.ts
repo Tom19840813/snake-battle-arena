@@ -9,6 +9,7 @@ interface GameStats {
   foodItems: number;
   elapsedTime: string;
   playerScore: number | null;
+  difficulty: number;
 }
 
 export class GameBoard {
@@ -24,10 +25,11 @@ export class GameBoard {
   private playerSnake: Snake | null = null;
   private isPlayerMode: boolean = false;
   private keyboardListener: ((e: KeyboardEvent) => void) | null = null;
+  private difficulty: number = 1;
   
   public onStatsUpdate: ((stats: GameStats) => void) | null = null;
 
-  constructor(ctx: CanvasRenderingContext2D, numSnakes: number = 20, isPlayerMode: boolean = false) {
+  constructor(ctx: CanvasRenderingContext2D, numSnakes: number = 20, isPlayerMode: boolean = false, difficulty: number = 1) {
     this.ctx = ctx;
     this.gridSize = 40;
     this.cellSize = ctx.canvas.width / this.gridSize;
@@ -38,6 +40,7 @@ export class GameBoard {
     this.animationFrame = 0;
     this.startTime = Date.now();
     this.isPlayerMode = isPlayerMode;
+    this.difficulty = difficulty;
 
     const predefinedColors = [
       '#FF5252', // Red (Snake 1)
@@ -49,7 +52,7 @@ export class GameBoard {
 
     if (this.isPlayerMode) {
       const playerPos = this.getRandomPosition();
-      this.playerSnake = new Snake(playerPos, predefinedColors[0], this.gridSize, true);
+      this.playerSnake = new Snake(playerPos, predefinedColors[0], this.gridSize, true, 1);
       this.snakes.push(this.playerSnake);
       
       this.keyboardListener = this.handleKeyDown.bind(this);
@@ -64,7 +67,8 @@ export class GameBoard {
       const colorIndex = this.isPlayerMode ? i + 1 : i;
       const color = colorIndex < 5 ? predefinedColors[colorIndex] : `hsl(${(colorIndex * 360) / numSnakes}, 70%, 60%)`;
       
-      this.snakes.push(new Snake(pos, color, this.gridSize));
+      const snakeDifficulty = i < 3 ? this.difficulty : Math.max(1, this.difficulty - 1);
+      this.snakes.push(new Snake(pos, color, this.gridSize, false, snakeDifficulty));
     }
 
     for (let i = 0; i < 10; i++) {
@@ -137,6 +141,17 @@ export class GameBoard {
     }
   }
   
+  setDifficulty(difficulty: number) {
+    if (difficulty < 1 || difficulty > 3) return;
+    this.difficulty = difficulty;
+    
+    this.snakes.forEach((snake, index) => {
+      if (!snake.isPlayerControlled) {
+        snake.difficulty = index < 3 ? this.difficulty : Math.max(1, this.difficulty - 1);
+      }
+    });
+  }
+  
   setPlayerMode(isPlayerMode: boolean) {
     if (this.isPlayerMode === isPlayerMode) return;
     
@@ -164,7 +179,7 @@ export class GameBoard {
 
     if (this.isPlayerMode) {
       const playerPos = this.getRandomPosition();
-      this.playerSnake = new Snake(playerPos, predefinedColors[0], this.gridSize, true);
+      this.playerSnake = new Snake(playerPos, predefinedColors[0], this.gridSize, true, 1);
       this.snakes.push(this.playerSnake);
       
       this.keyboardListener = this.handleKeyDown.bind(this);
@@ -181,7 +196,8 @@ export class GameBoard {
       const colorIndex = this.isPlayerMode ? i + 1 : i;
       const color = colorIndex < 5 ? predefinedColors[colorIndex] : `hsl(${(colorIndex * 360) / numSnakes}, 70%, 60%)`;
       
-      this.snakes.push(new Snake(pos, color, this.gridSize));
+      const snakeDifficulty = i < 3 ? this.difficulty : Math.max(1, this.difficulty - 1);
+      this.snakes.push(new Snake(pos, color, this.gridSize, false, snakeDifficulty));
     }
 
     for (let i = 0; i < 10; i++) {
@@ -211,10 +227,31 @@ export class GameBoard {
     this.food.push(pos);
   }
 
+  updateDifficultyBasedOnScore() {
+    if (this.playerSnake && this.playerSnake.isAlive) {
+      const score = this.playerSnake.score;
+      let newDifficulty = 1;
+      
+      if (score >= 100) {
+        newDifficulty = 3;  // Advanced
+      } else if (score >= 50) {
+        newDifficulty = 2;  // Intermediate
+      }
+      
+      if (newDifficulty !== this.difficulty) {
+        this.setDifficulty(newDifficulty);
+      }
+    }
+  }
+
   private update() {
     const now = performance.now();
     if (now - this.lastUpdate < this.updateInterval) return;
     this.lastUpdate = now;
+
+    if (this.isPlayerMode) {
+      this.updateDifficultyBasedOnScore();
+    }
 
     this.snakes.forEach(snake => {
       snake.think(this.food, this.snakes.filter(s => s !== snake));
@@ -316,7 +353,8 @@ export class GameBoard {
         activeSnakes: this.snakes.filter(s => s.isAlive).length,
         foodItems: this.food.length,
         elapsedTime: formattedTime,
-        playerScore: this.playerSnake?.score || null
+        playerScore: this.playerSnake?.score || null,
+        difficulty: this.difficulty
       });
     }
   }
