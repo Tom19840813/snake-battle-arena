@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from 'react';
 import { GameBoard } from '../game/GameBoard';
 import { Card } from '@/components/ui/card';
@@ -8,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { SKINS, getUnlockedSkins } from '../game/GameAssets';
 import { Badge } from '@/components/ui/badge';
 import { PowerUpState } from '../game/Snake';
+import { RefreshCw, ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from 'lucide-react';
 
 interface LeaderboardItem {
   rank: number;
@@ -39,7 +39,6 @@ const Index = () => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Set canvas size
     const updateCanvasSize = () => {
       const size = Math.min(window.innerWidth - 40, 800);
       canvas.width = size;
@@ -49,10 +48,8 @@ const Index = () => {
     updateCanvasSize();
     window.addEventListener('resize', updateCanvasSize);
 
-    // Initialize game
     gameRef.current = new GameBoard(ctx, 20, playerMode, difficulty);
     
-    // Set up event listeners for game stats updates
     gameRef.current.onStatsUpdate = (stats) => {
       setLeaderboard(stats.topSnakes.map((snake, index) => ({
         rank: index + 1,
@@ -71,7 +68,6 @@ const Index = () => {
       if (stats.playerScore !== null) {
         setPlayerScore(stats.playerScore);
         
-        // Check if player is dead
         if (playerMode && stats.topSnakes.length > 0 && stats.playerScore === 0) {
           setGameOver(true);
         }
@@ -84,7 +80,7 @@ const Index = () => {
       window.removeEventListener('resize', updateCanvasSize);
       gameRef.current?.stop();
     };
-  }, []);  // Remove playerMode dependency to prevent recreation on toggle
+  }, []);
 
   const togglePlayerMode = () => {
     setGameOver(false);
@@ -104,6 +100,12 @@ const Index = () => {
     }
   };
 
+  const handleDirectionButton = (direction: { x: number, y: number }) => {
+    if (gameRef.current?.playerSnake && !gameOver) {
+      gameRef.current.playerSnake.setDirection(direction);
+    }
+  };
+
   const changeSkin = (skinId: string) => {
     if (gameRef.current) {
       gameRef.current.setPlayerSkin(skinId);
@@ -112,16 +114,14 @@ const Index = () => {
     }
   };
 
-  // Get unlocked skins based on player score
   const availableSkins = playerScore !== null ? getUnlockedSkins(playerScore) : [SKINS[0]];
 
-  // Predefined colors for the snake indicators
   const snakeColors = [
-    '#FF5252', // Red (Snake 1)
-    '#E6E633', // Yellow (Snake 2)
-    '#4CAF50', // Green (Snake 3)
-    '#26C6DA', // Cyan (Snake 4)
-    '#5C6BC0'  // Blue (Snake 5)
+    '#FF5252',
+    '#E6E633',
+    '#4CAF50',
+    '#26C6DA',
+    '#5C6BC0'
   ];
 
   const getDifficultyLabel = (level: number) => {
@@ -133,7 +133,6 @@ const Index = () => {
     }
   };
 
-  // Power-up name mapping
   const getPowerUpName = (effect: string) => {
     switch (effect) {
       case "speed": return "Speed Boost";
@@ -186,8 +185,9 @@ const Index = () => {
                 <p className="text-xl text-neutral-300 mb-6">Your score: {playerScore}</p>
                 <button 
                   onClick={restartGame}
-                  className="px-6 py-3 bg-green-600 text-white rounded-full hover:bg-green-700 transition-colors"
+                  className="px-6 py-3 bg-green-600 text-white rounded-full hover:bg-green-700 transition-colors flex items-center gap-2"
                 >
+                  <RefreshCw size={20} />
                   Play Again
                 </button>
               </div>
@@ -285,6 +285,37 @@ const Index = () => {
                 <div className="text-neutral-300">↑ ↓ ← → Arrow Keys</div>
               </div>
             )}
+            
+            {playerMode && !gameOver && (
+              <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 p-3 bg-black/70 rounded-lg flex flex-col items-center md:hidden">
+                <button 
+                  onClick={() => handleDirectionButton({ x: 0, y: -1 })}
+                  className="p-3 bg-neutral-800 rounded-lg hover:bg-neutral-700 active:bg-neutral-600 transition-colors mb-2"
+                >
+                  <ArrowUp size={24} className="text-white" />
+                </button>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => handleDirectionButton({ x: -1, y: 0 })}
+                    className="p-3 bg-neutral-800 rounded-lg hover:bg-neutral-700 active:bg-neutral-600 transition-colors"
+                  >
+                    <ArrowLeft size={24} className="text-white" />
+                  </button>
+                  <button 
+                    onClick={() => handleDirectionButton({ x: 0, y: 1 })}
+                    className="p-3 bg-neutral-800 rounded-lg hover:bg-neutral-700 active:bg-neutral-600 transition-colors"
+                  >
+                    <ArrowDown size={24} className="text-white" />
+                  </button>
+                  <button 
+                    onClick={() => handleDirectionButton({ x: 1, y: 0 })}
+                    className="p-3 bg-neutral-800 rounded-lg hover:bg-neutral-700 active:bg-neutral-600 transition-colors"
+                  >
+                    <ArrowRight size={24} className="text-white" />
+                  </button>
+                </div>
+              </div>
+            )}
           </Card>
 
           <div className="space-y-4">
@@ -324,7 +355,6 @@ const Index = () => {
                     </div>
                   ))
                 ) : (
-                  // Placeholders while loading
                   Array.from({ length: 5 }).map((_, i) => (
                     <div
                       key={i}
