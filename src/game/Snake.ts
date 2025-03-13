@@ -1,4 +1,3 @@
-
 export interface Position {
   x: number;
   y: number;
@@ -7,6 +6,13 @@ export interface Position {
 export interface Direction {
   x: number;
   y: number;
+}
+
+export interface PowerUpState {
+  type: string;
+  effect: string;
+  timeLeft: number;
+  startTime: number;
 }
 
 export class Snake {
@@ -18,6 +24,15 @@ export class Snake {
   private gridSize: number;
   public isPlayerControlled: boolean;
   public difficulty: number;
+  public skinId: string = "default";
+  public activePattern: string | null = null;
+  public glowEffect: boolean = false;
+  public activePowerUps: PowerUpState[] = [];
+  public uniqueAbility: string | null = null;
+  public hasTeleported: boolean = false;
+  public splitSnake: Snake | null = null;
+  private baseSpeed: number = 1;
+  private magnetRange: number = 5;
 
   constructor(startPos: Position, color: string, gridSize: number, isPlayerControlled: boolean = false, difficulty: number = 1) {
     this.body = [startPos];
@@ -28,10 +43,137 @@ export class Snake {
     this.gridSize = gridSize;
     this.isPlayerControlled = isPlayerControlled;
     this.difficulty = difficulty;
+    
+    // Assign a random unique ability to AI snakes
+    if (!isPlayerControlled && Math.random() < 0.3) {
+      const abilities = ["teleport", "split", "magnet"];
+      this.uniqueAbility = abilities[Math.floor(Math.random() * abilities.length)];
+    }
+  }
+
+  // Apply a skin to the snake
+  applySkin(skinId: string, skinColor: string, pattern: string | undefined, glow: boolean | undefined) {
+    this.skinId = skinId;
+    this.color = skinColor;
+    this.activePattern = pattern || null;
+    this.glowEffect = glow || false;
+  }
+
+  // Add a power-up to the snake
+  addPowerUp(powerUpId: string, effect: string, duration: number) {
+    // Don't stack same power-ups, just refresh the timer
+    const existingPowerUpIndex = this.activePowerUps.findIndex(p => p.effect === effect);
+    
+    if (existingPowerUpIndex >= 0) {
+      this.activePowerUps[existingPowerUpIndex].timeLeft = duration;
+      this.activePowerUps[existingPowerUpIndex].startTime = Date.now();
+    } else {
+      this.activePowerUps.push({
+        type: powerUpId,
+        effect,
+        timeLeft: duration,
+        startTime: Date.now()
+      });
+    }
+
+    // Handle instant effects
+    if (effect === "teleport") {
+      this.teleport();
+    } else if (effect === "split" && !this.splitSnake && this.body.length > 3) {
+      this.createSplitSnake();
+    }
+  }
+
+  // Update power-up timers
+  updatePowerUps() {
+    const now = Date.now();
+    this.activePowerUps = this.activePowerUps.filter(powerUp => {
+      const elapsedSeconds = (now - powerUp.startTime) / 1000;
+      return elapsedSeconds < powerUp.timeLeft;
+    });
+  }
+
+  // Check if a specific power-up is active
+  hasPowerUp(effect: string): boolean {
+    return this.activePowerUps.some(p => p.effect === effect);
+  }
+
+  // Teleport to a random safe location
+  teleport() {
+    if (this.hasTeleported) return; // Prevent multiple teleports in a single tick
+    
+    const maxAttempts = 20;
+    let attempts = 0;
+    let newPos: Position | null = null;
+    
+    while (!newPos && attempts < maxAttempts) {
+      const candidate = {
+        x: Math.floor(Math.random() * this.gridSize),
+        y: Math.floor(Math.random() * this.gridSize)
+      };
+      
+      // Check if position is safe (not too close to other snakes)
+      const isSafe = true; // We'll simplify for now, but we'd check for collisions here
+      
+      if (isSafe) {
+        newPos = candidate;
+      }
+      attempts++;
+    }
+    
+    if (newPos) {
+      this.body = [newPos];
+      this.hasTeleported = true;
+    }
+  }
+
+  // Create a split snake (clone) that follows similar behavior
+  createSplitSnake() {
+    if (this.body.length < 4) return;
+    
+    // Take half of the current snake's body for the new one
+    const splitPoint = Math.floor(this.body.length / 2);
+    const splitBody = this.body.splice(splitPoint);
+    
+    // Use the last segment of the remaining body as the head of the split snake
+    const splitHead = { ...splitBody[0] };
+    
+    // Create the split snake with the same properties as the parent
+    this.splitSnake = new Snake(
+      splitHead,
+      this.color,
+      this.gridSize,
+      false,
+      this.difficulty
+    );
+    
+    // Assign the rest of the split body
+    this.splitSnake.body = splitBody;
+    
+    // Give it a slightly different direction
+    this.splitSnake.direction = { ...this.direction };
+    if (this.direction.x !== 0) {
+      this.splitSnake.direction.y = Math.random() > 0.5 ? 1 : -1;
+      this.splitSnake.direction.x = 0;
+    } else {
+      this.splitSnake.direction.x = Math.random() > 0.5 ? 1 : -1;
+      this.splitSnake.direction.y = 0;
+    }
   }
 
   think(food: Position[], otherSnakes: Snake[]) {
     if (!this.isAlive || this.isPlayerControlled) return;
+    
+    // Reset teleport flag
+    this.hasTeleported = false;
+    
+    // Update power-ups
+    this.updatePowerUps();
+    
+    // Use unique ability occasionally
+    if (this.uniqueAbility && Math.random() < 0.005) {
+      this.addPowerUp(this.uniqueAbility, this.uniqueAbility, 5);
+    }
 
     // Different thinking strategies based on difficulty
     if (this.difficulty === 1) {
@@ -41,9 +183,13 @@ export class Snake {
     } else {
       this.thinkAdvanced(food, otherSnakes);
     }
+    
+    // Update split snake if exists
+    if (this.splitSnake) {
+      this.splitSnake.think(food, [...otherSnakes, this]);
+    }
   }
 
-  // Basic AI: Just find closest food, minimal obstacle avoidance
   private thinkBasic(food: Position[], otherSnakes: Snake[]) {
     let closestFood = this.findClosestFood(food);
     let newDirection = this.calculateDirection(closestFood);
@@ -86,7 +232,6 @@ export class Snake {
     this.direction = newDirection;
   }
 
-  // Intermediate AI: Looks further ahead to avoid obstacles
   private thinkIntermediate(food: Position[], otherSnakes: Snake[]) {
     let closestFood = this.findClosestFood(food);
     let newDirection = this.calculateDirection(closestFood);
@@ -117,7 +262,7 @@ export class Snake {
       
       for (const alt of alternatives) {
         // Skip if it's a 180-degree turn
-        if (alt.x === -this.direction.x && alt.y === -this.direction.y && this.body.length > 1) {
+        if (alt.x === -this.direction.x && alt.y === 0 && this.body.length > 1) {
           continue;
         }
         
@@ -168,7 +313,6 @@ export class Snake {
     this.direction = newDirection;
   }
 
-  // Advanced AI: Uses more sophisticated path planning, targets food more effectively
   private thinkAdvanced(food: Position[], otherSnakes: Snake[]) {
     // Find all food, not just closest
     const sortedFood = this.findSortedFood(food);
@@ -375,9 +519,10 @@ export class Snake {
   }
 
   setDirection(newDirection: Direction) {
-    // Prevent 180-degree turns
+    // Prevent 180-degree turns unless we have the split ability active
     if (
       this.body.length > 1 &&
+      !this.hasPowerUp("split") &&
       (this.direction.x === -newDirection.x && this.direction.y === 0 && newDirection.y === 0) ||
       (this.direction.y === -newDirection.y && this.direction.x === 0 && newDirection.x === 0)
     ) {
@@ -414,6 +559,17 @@ export class Snake {
   }
 
   private wouldCollide(nextPos: Position, otherSnakes: Snake[]): boolean {
+    // If we have a shield power-up, we don't collide with other snakes
+    if (this.hasPowerUp("shield")) {
+      // Only check for wall collisions
+      return (
+        nextPos.x < 0 ||
+        nextPos.x >= this.gridSize ||
+        nextPos.y < 0 ||
+        nextPos.y >= this.gridSize
+      );
+    }
+    
     // Check walls
     if (
       nextPos.x < 0 ||
@@ -432,6 +588,12 @@ export class Snake {
     // Check other snakes collision with entire body
     return otherSnakes.some(snake => {
       if (!snake.isAlive) return false;
+      
+      // Skip collision check with invisible snakes
+      if (snake.hasPowerUp("invisible") && Math.random() < 0.7) {
+        return false;
+      }
+      
       return snake.body.some(segment => {
         // Check if we would collide with any part of the other snake's body
         const wouldCollide = segment.x === nextPos.x && segment.y === nextPos.y;
@@ -447,23 +609,67 @@ export class Snake {
 
   move(food: Position[]): boolean {
     if (!this.isAlive) return false;
+    
+    // Update power-ups
+    this.updatePowerUps();
+    
+    // Calculate movement speed based on power-ups
+    const speed = this.hasPowerUp("speed") ? 2 : 1;
+    
+    let eating = false;
+    
+    // For speed powerup, we move multiple steps per tick
+    for (let i = 0; i < speed; i++) {
+      const newHead = {
+        x: this.body[0].x + this.direction.x,
+        y: this.body[0].y + this.direction.y
+      };
+      
+      // Food magnet power-up: attract nearby food
+      if (this.hasPowerUp("magnet")) {
+        food.forEach(f => {
+          const distance = Math.abs(f.x - this.body[0].x) + Math.abs(f.y - this.body[0].y);
+          if (distance <= this.magnetRange) {
+            // Move food slightly closer to snake head
+            if (f.x < this.body[0].x) f.x++;
+            else if (f.x > this.body[0].x) f.x--;
+            
+            if (f.y < this.body[0].y) f.y++;
+            else if (f.y > this.body[0].y) f.y--;
+          }
+        });
+      }
 
-    const newHead = {
-      x: this.body[0].x + this.direction.x,
-      y: this.body[0].y + this.direction.y
-    };
+      // Check if eating food
+      const foodIndex = food.findIndex(f => f.x === newHead.x && f.y === newHead.y);
+      const currentEating = foodIndex !== -1;
 
-    // Check if eating food
-    const foodIndex = food.findIndex(f => f.x === newHead.x && f.y === newHead.y);
-    const eating = foodIndex !== -1;
+      if (currentEating) {
+        this.score += 10;
+        eating = true;
+      } else if (i === 0) { // Only remove tail on first step if not eating
+        this.body.pop();
+      }
 
-    if (eating) {
-      this.score += 10;
-    } else {
-      this.body.pop();
+      this.body.unshift(newHead);
+      
+      // Only continue multi-step movement if not eating
+      if (currentEating) break;
     }
-
-    this.body.unshift(newHead);
+    
+    // Update split snake if it exists
+    if (this.splitSnake) {
+      const splitAte = this.splitSnake.move(food);
+      if (splitAte) {
+        this.score += 5; // Half the points for split snake eating
+      }
+      
+      // Remove split snake if it's dead
+      if (!this.splitSnake.isAlive) {
+        this.splitSnake = null;
+      }
+    }
+    
     return eating;
   }
 }

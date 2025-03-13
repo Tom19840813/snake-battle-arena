@@ -5,6 +5,9 @@ import { Card } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { SKINS, getUnlockedSkins } from '../game/GameAssets';
+import { Badge } from '@/components/ui/badge';
+import { PowerUpState } from '../game/Snake';
 
 interface LeaderboardItem {
   rank: number;
@@ -24,6 +27,10 @@ const Index = () => {
   const [playerScore, setPlayerScore] = useState<number | null>(null);
   const [gameOver, setGameOver] = useState<boolean>(false);
   const [difficulty, setDifficulty] = useState<number>(1);
+  const [unlockedSkins, setUnlockedSkins] = useState<number>(1);
+  const [activeSkin, setActiveSkin] = useState<string>("default");
+  const [activePowerUps, setActivePowerUps] = useState<PowerUpState[]>([]);
+  const [showSkinSelector, setShowSkinSelector] = useState<boolean>(false);
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -58,6 +65,8 @@ const Index = () => {
       setFoodItems(stats.foodItems);
       setElapsedTime(stats.elapsedTime);
       setDifficulty(stats.difficulty);
+      setUnlockedSkins(stats.unlockedSkins);
+      setActivePowerUps(stats.activePowerUps || []);
       
       if (stats.playerScore !== null) {
         setPlayerScore(stats.playerScore);
@@ -80,6 +89,7 @@ const Index = () => {
   const togglePlayerMode = () => {
     setGameOver(false);
     setPlayerScore(null);
+    setActiveSkin("default");
     
     if (gameRef.current) {
       gameRef.current.setPlayerMode(!playerMode);
@@ -93,6 +103,17 @@ const Index = () => {
       gameRef.current.setPlayerMode(playerMode);
     }
   };
+
+  const changeSkin = (skinId: string) => {
+    if (gameRef.current) {
+      gameRef.current.setPlayerSkin(skinId);
+      setActiveSkin(skinId);
+      setShowSkinSelector(false);
+    }
+  };
+
+  // Get unlocked skins based on player score
+  const availableSkins = playerScore !== null ? getUnlockedSkins(playerScore) : [SKINS[0]];
 
   // Predefined colors for the snake indicators
   const snakeColors = [
@@ -109,6 +130,19 @@ const Index = () => {
       case 2: return "Medium";
       case 3: return "Hard";
       default: return "Easy";
+    }
+  };
+
+  // Power-up name mapping
+  const getPowerUpName = (effect: string) => {
+    switch (effect) {
+      case "speed": return "Speed Boost";
+      case "shield": return "Shield";
+      case "invisible": return "Invisibility";
+      case "magnet": return "Food Magnet";
+      case "teleport": return "Teleport";
+      case "split": return "Split";
+      default: return effect;
     }
   };
 
@@ -171,6 +205,77 @@ const Index = () => {
                 )}>
                   {getDifficultyLabel(difficulty)}
                 </span>
+              </div>
+            )}
+            
+            {playerMode && !gameOver && (
+              <div className="absolute top-6 right-6 flex flex-col gap-2 items-end">
+                {activePowerUps.length > 0 && (
+                  <div className="flex gap-1 mb-2">
+                    {activePowerUps.map((powerUp, index) => (
+                      <Badge key={index} className={cn(
+                        "animate-pulse",
+                        powerUp.effect === "speed" ? "bg-yellow-500" :
+                        powerUp.effect === "shield" ? "bg-blue-500" :
+                        powerUp.effect === "invisible" ? "bg-gray-500" :
+                        powerUp.effect === "magnet" ? "bg-pink-500" :
+                        "bg-purple-500"
+                      )}>
+                        {getPowerUpName(powerUp.effect)}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+                <button
+                  onClick={() => setShowSkinSelector(!showSkinSelector)}
+                  className="px-3 py-2 bg-black/70 rounded-lg text-sm text-white hover:bg-black/90 transition-colors"
+                >
+                  Change Skin
+                </button>
+                
+                {showSkinSelector && (
+                  <div className="mt-2 p-3 bg-black/90 rounded-lg w-64">
+                    <h3 className="text-white text-sm mb-2">Select Skin ({availableSkins.length}/{SKINS.length} Unlocked)</h3>
+                    <div className="grid grid-cols-2 gap-2">
+                      {SKINS.map(skin => {
+                        const isUnlocked = !skin.unlockScore || (playerScore !== null && playerScore >= (skin.unlockScore || 0));
+                        return (
+                          <button
+                            key={skin.id}
+                            onClick={() => isUnlocked && changeSkin(skin.id)}
+                            className={cn(
+                              "p-2 rounded border text-left text-sm flex items-center gap-2",
+                              isUnlocked 
+                                ? skin.id === activeSkin 
+                                  ? "bg-neutral-700 border-white" 
+                                  : "bg-neutral-800 border-neutral-700 hover:bg-neutral-700"
+                                : "bg-neutral-900 border-neutral-800 opacity-50 cursor-not-allowed"
+                            )}
+                            disabled={!isUnlocked}
+                          >
+                            <div 
+                              className={cn(
+                                "w-4 h-4 rounded-full", 
+                                skin.glow && "shadow-glow"
+                              )}
+                              style={{ 
+                                backgroundColor: skin.color === "rainbow"
+                                  ? `hsl(${(Date.now() / 20) % 360}, 70%, 60%)`
+                                  : skin.color 
+                              }}
+                            />
+                            <span className="text-white">{skin.name}</span>
+                            {!isUnlocked && (
+                              <span className="text-xs text-neutral-400 ml-auto">
+                                {skin.unlockScore} pts
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
             
@@ -260,20 +365,71 @@ const Index = () => {
                   <span id="elapsedTime" className="text-neutral-200">{elapsedTime}</span>
                 </div>
                 {playerMode && (
-                  <div className="flex justify-between">
-                    <span className="text-neutral-400">Difficulty</span>
-                    <span className={cn(
-                      "px-2 py-0.5 rounded-md text-sm font-medium",
-                      difficulty === 1 ? "bg-green-600/70 text-green-100" :
-                      difficulty === 2 ? "bg-yellow-600/70 text-yellow-100" :
-                      "bg-red-600/70 text-red-100"
-                    )}>
-                      {getDifficultyLabel(difficulty)}
-                    </span>
-                  </div>
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-neutral-400">Difficulty</span>
+                      <span className={cn(
+                        "px-2 py-0.5 rounded-md text-sm font-medium",
+                        difficulty === 1 ? "bg-green-600/70 text-green-100" :
+                        difficulty === 2 ? "bg-yellow-600/70 text-yellow-100" :
+                        "bg-red-600/70 text-red-100"
+                      )}>
+                        {getDifficultyLabel(difficulty)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-neutral-400">Unlocked Skins</span>
+                      <span className="text-neutral-200">{unlockedSkins}/{SKINS.length}</span>
+                    </div>
+                  </>
                 )}
               </div>
             </Card>
+            
+            {playerMode && (
+              <Card className="p-4 bg-neutral-900/50 backdrop-blur-xl border-neutral-800">
+                <h2 className="text-lg font-semibold text-neutral-100 mb-3">
+                  Power-ups
+                </h2>
+                <div className="space-y-3">
+                  {activePowerUps.length > 0 ? (
+                    activePowerUps.map((powerUp, index) => (
+                      <div key={index} className="flex justify-between items-center p-2 bg-neutral-800/50 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <div className={cn(
+                            "w-8 h-8 rounded-full flex items-center justify-center text-lg",
+                            powerUp.effect === "speed" ? "bg-yellow-500/30" :
+                            powerUp.effect === "shield" ? "bg-blue-500/30" :
+                            powerUp.effect === "invisible" ? "bg-gray-500/30" :
+                            powerUp.effect === "magnet" ? "bg-pink-500/30" :
+                            "bg-purple-500/30"
+                          )}>
+                            {powerUp.effect === "speed" && "⚡"}
+                            {powerUp.effect === "shield" && "🛡️"}
+                            {powerUp.effect === "invisible" && "👻"}
+                            {powerUp.effect === "magnet" && "🧲"}
+                            {powerUp.effect === "teleport" && "🌀"}
+                            {powerUp.effect === "split" && "🍴"}
+                          </div>
+                          <span className="text-neutral-200">{getPowerUpName(powerUp.effect)}</span>
+                        </div>
+                        <div className="text-xs text-neutral-400">
+                          {Math.max(0, Math.ceil(powerUp.timeLeft - ((Date.now() - powerUp.startTime) / 1000)))}s
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center text-neutral-500 py-2">
+                      No active power-ups
+                    </div>
+                  )}
+                  
+                  <div className="mt-3 text-xs text-neutral-500">
+                    <p>Collect power-ups that appear on the board to gain special abilities.</p>
+                  </div>
+                </div>
+              </Card>
+            )}
           </div>
         </div>
       </div>

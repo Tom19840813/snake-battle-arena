@@ -1,4 +1,5 @@
-import { Snake, Position } from './Snake';
+import { Snake, Position, PowerUpState } from './Snake';
+import { POWER_UPS, SKINS, getUnlockedSkins } from './GameAssets';
 
 interface GameStats {
   topSnakes: {
@@ -10,12 +11,16 @@ interface GameStats {
   elapsedTime: string;
   playerScore: number | null;
   difficulty: number;
+  unlockedSkins: number;
+  activePowerUps: PowerUpState[];
 }
 
 export class GameBoard {
   private ctx: CanvasRenderingContext2D;
   private snakes: Snake[];
   private food: Position[];
+  private powerUps: Position[] = [];
+  private powerUpTypes: string[] = [];
   private gridSize: number;
   private cellSize: number;
   private animationFrame: number;
@@ -26,6 +31,9 @@ export class GameBoard {
   private isPlayerMode: boolean = false;
   private keyboardListener: ((e: KeyboardEvent) => void) | null = null;
   private difficulty: number = 1;
+  private powerUpSpawnInterval: number = 10000; // 10 seconds
+  private lastPowerUpSpawn: number = 0;
+  private playerSkin: string = "default";
   
   public onStatsUpdate: ((stats: GameStats) => void) | null = null;
 
@@ -58,6 +66,18 @@ export class GameBoard {
       this.keyboardListener = this.handleKeyDown.bind(this);
       window.addEventListener('keydown', this.keyboardListener);
       this.setupTouchControls();
+      
+      // Apply default skin
+      const defaultSkin = SKINS[0];
+      this.playerSkin = defaultSkin.id;
+      if (this.playerSnake) {
+        this.playerSnake.applySkin(
+          defaultSkin.id,
+          defaultSkin.color,
+          defaultSkin.pattern,
+          defaultSkin.glow
+        );
+      }
     }
 
     const aiCount = this.isPlayerMode ? numSnakes - 1 : numSnakes;
@@ -141,70 +161,38 @@ export class GameBoard {
     }
   }
   
-  setDifficulty(difficulty: number) {
-    if (difficulty < 1 || difficulty > 3) return;
-    this.difficulty = difficulty;
+  setPlayerSkin(skinId: string) {
+    if (!this.playerSnake) return;
     
-    this.snakes.forEach((snake, index) => {
-      if (!snake.isPlayerControlled) {
-        snake.difficulty = index < 3 ? this.difficulty : Math.max(1, this.difficulty - 1);
-      }
-    });
+    const skin = SKINS.find(s => s.id === skinId);
+    if (!skin) return;
+    
+    this.playerSkin = skinId;
+    this.playerSnake.applySkin(
+      skin.id,
+      skin.color,
+      skin.pattern,
+      skin.glow
+    );
   }
-  
-  setPlayerMode(isPlayerMode: boolean) {
-    if (this.isPlayerMode === isPlayerMode) return;
-    
-    this.stop();
-    if (this.keyboardListener) {
-      window.removeEventListener('keydown', this.keyboardListener);
-      this.keyboardListener = null;
-    }
-    
-    this.isPlayerMode = isPlayerMode;
-    this.snakes = [];
-    this.food = [];
-    this.lastUpdate = 0;
-    this.startTime = Date.now();
-    
-    const numSnakes = 20;
-    
-    const predefinedColors = [
-      '#FF5252', // Red (Snake 1)
-      '#E6E633', // Yellow (Snake 2)
-      '#4CAF50', // Green (Snake 3)
-      '#26C6DA', // Cyan (Snake 4)
-      '#5C6BC0'  // Blue (Snake 5)
-    ];
 
-    if (this.isPlayerMode) {
-      const playerPos = this.getRandomPosition();
-      this.playerSnake = new Snake(playerPos, predefinedColors[0], this.gridSize, true, 1);
-      this.snakes.push(this.playerSnake);
-      
-      this.keyboardListener = this.handleKeyDown.bind(this);
-      window.addEventListener('keydown', this.keyboardListener);
-      this.setupTouchControls();
-    } else {
-      this.playerSnake = null;
-    }
+  spawnPowerUp() {
+    if (this.powerUps.length >= 3) return; // Max 3 power-ups at once
     
-    const aiCount = this.isPlayerMode ? numSnakes - 1 : numSnakes;
-    for (let i = 0; i < aiCount; i++) {
-      const pos = this.getRandomPosition();
-      
-      const colorIndex = this.isPlayerMode ? i + 1 : i;
-      const color = colorIndex < 5 ? predefinedColors[colorIndex] : `hsl(${(colorIndex * 360) / numSnakes}, 70%, 60%)`;
-      
-      const snakeDifficulty = i < 3 ? this.difficulty : Math.max(1, this.difficulty - 1);
-      this.snakes.push(new Snake(pos, color, this.gridSize, false, snakeDifficulty));
-    }
-
-    for (let i = 0; i < 10; i++) {
-      this.spawnFood();
-    }
+    const pos = this.getRandomPosition();
     
-    this.start();
+    // Check if position is valid (not on food or snake)
+    const isValidPosition = !this.food.some(f => f.x === pos.x && f.y === pos.y) &&
+                          !this.snakes.some(s => s.body.some(b => b.x === pos.x && b.y === pos.y)) &&
+                          !this.powerUps.some(p => p.x === pos.x && p.y === pos.y);
+    
+    if (isValidPosition) {
+      this.powerUps.push(pos);
+      
+      // Randomly select power-up type
+      const powerUpIndex = Math.floor(Math.random() * POWER_UPS.length);
+      this.powerUpTypes.push(POWER_UPS[powerUpIndex].id);
+    }
   }
 
   private getRandomPosition(): Position {
@@ -249,42 +237,54 @@ export class GameBoard {
     if (now - this.lastUpdate < this.updateInterval) return;
     this.lastUpdate = now;
 
+    // Spawn power-ups periodically
+    if (now - this.lastPowerUpSpawn > this.powerUpSpawnInterval) {
+      this.spawnPowerUp();
+      this.lastPowerUpSpawn = now;
+    }
+
     if (this.isPlayerMode) {
       this.updateDifficultyBasedOnScore();
     }
 
+    // Update all snakes
     this.snakes.forEach(snake => {
       snake.think(this.food, this.snakes.filter(s => s !== snake));
     });
 
+    // Check player collision
     if (this.playerSnake && this.playerSnake.isAlive) {
       const nextPos = {
         x: this.playerSnake.body[0].x + this.playerSnake.direction.x,
         y: this.playerSnake.body[0].y + this.playerSnake.direction.y
       };
       
-      if (
-        nextPos.x < 0 ||
-        nextPos.x >= this.gridSize ||
-        nextPos.y < 0 ||
-        nextPos.y >= this.gridSize
-      ) {
-        this.playerSnake.isAlive = false;
-      } 
-      else if (this.playerSnake.body.slice(1).some(segment => 
-        segment.x === nextPos.x && segment.y === nextPos.y
-      )) {
-        this.playerSnake.isAlive = false;
-      }
-      else if (this.snakes.filter(s => s !== this.playerSnake).some(snake => 
-        snake.isAlive && snake.body.some(segment => 
+      // Skip collision check if player has shield
+      if (!this.playerSnake.hasPowerUp("shield")) {
+        if (
+          nextPos.x < 0 ||
+          nextPos.x >= this.gridSize ||
+          nextPos.y < 0 ||
+          nextPos.y >= this.gridSize
+        ) {
+          this.playerSnake.isAlive = false;
+        } 
+        else if (this.playerSnake.body.slice(1).some(segment => 
           segment.x === nextPos.x && segment.y === nextPos.y
-        )
-      )) {
-        this.playerSnake.isAlive = false;
+        )) {
+          this.playerSnake.isAlive = false;
+        }
+        else if (this.snakes.filter(s => s !== this.playerSnake).some(snake => 
+          snake.isAlive && snake.body.some(segment => 
+            segment.x === nextPos.x && segment.y === nextPos.y
+          )
+        )) {
+          this.playerSnake.isAlive = false;
+        }
       }
     }
 
+    // Move snakes and check for food/power-up consumption
     this.snakes.forEach(snake => {
       const ate = snake.move(this.food);
       if (ate) {
@@ -294,35 +294,38 @@ export class GameBoard {
         this.food.splice(foodIndex, 1);
         this.spawnFood();
       }
+      
+      // Check for power-up pickup
+      if (snake.isAlive) {
+        const powerUpIndex = this.powerUps.findIndex(
+          p => p.x === snake.body[0].x && p.y === snake.body[0].y
+        );
+        
+        if (powerUpIndex !== -1) {
+          const powerUpType = this.powerUpTypes[powerUpIndex];
+          const powerUp = POWER_UPS.find(p => p.id === powerUpType);
+          
+          if (powerUp) {
+            snake.addPowerUp(powerUp.id, powerUp.effect, powerUp.duration);
+          }
+          
+          // Remove the power-up
+          this.powerUps.splice(powerUpIndex, 1);
+          this.powerUpTypes.splice(powerUpIndex, 1);
+        }
+      }
     });
 
     this.updateStats();
   }
 
-  private updateLeaderboard() {
-    const topSnakes = [...this.snakes]
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 5);
-      
-    const leaderboardItems = document.getElementById('leaderboard')?.children;
-    if (leaderboardItems) {
-      for (let i = 0; i < Math.min(5, leaderboardItems.length); i++) {
-        const item = leaderboardItems[i];
-        const scoreElement = item.querySelector('span:last-child');
-        
-        if (scoreElement && topSnakes[i]) {
-          scoreElement.textContent = topSnakes[i].score.toString();
-        }
-      }
-    }
-  }
-  
   private updateStats() {
     const seconds = Math.floor((Date.now() - this.startTime) / 1000);
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
     const formattedTime = `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
     
+    // Update DOM elements if they exist
     const activeSnakesElement = document.getElementById('activeSnakes');
     const foodItemsElement = document.getElementById('foodItems');
     const elapsedTimeElement = document.getElementById('elapsedTime');
@@ -339,6 +342,7 @@ export class GameBoard {
       elapsedTimeElement.textContent = formattedTime;
     }
     
+    // Notify parent component of stats update
     if (this.onStatsUpdate) {
       const topSnakes = [...this.snakes]
         .sort((a, b) => b.score - a.score)
@@ -348,13 +352,19 @@ export class GameBoard {
           score: snake.score
         }));
         
+      const playerScore = this.playerSnake?.score || null;
+      const unlockedSkins = playerScore !== null ? getUnlockedSkins(playerScore).length : 0;
+      const activePowerUps = this.playerSnake?.activePowerUps || [];
+        
       this.onStatsUpdate({
         topSnakes,
         activeSnakes: this.snakes.filter(s => s.isAlive).length,
         foodItems: this.food.length,
         elapsedTime: formattedTime,
-        playerScore: this.playerSnake?.score || null,
-        difficulty: this.difficulty
+        playerScore,
+        difficulty: this.difficulty,
+        unlockedSkins,
+        activePowerUps
       });
     }
   }
@@ -363,6 +373,7 @@ export class GameBoard {
     const { width, height } = this.ctx.canvas;
     this.ctx.clearRect(0, 0, width, height);
 
+    // Draw grid
     this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
     this.ctx.lineWidth = 1;
     for (let i = 0; i <= this.gridSize; i++) {
@@ -377,6 +388,7 @@ export class GameBoard {
       this.ctx.stroke();
     }
 
+    // Draw food
     this.food.forEach(f => {
       this.ctx.fillStyle = '#ea384c';
       this.ctx.beginPath();
@@ -389,22 +401,139 @@ export class GameBoard {
       );
       this.ctx.fill();
     });
+    
+    // Draw power-ups
+    this.powerUps.forEach((p, index) => {
+      const powerUpType = this.powerUpTypes[index];
+      const powerUp = POWER_UPS.find(pu => pu.id === powerUpType);
+      
+      if (powerUp) {
+        // Draw power-up circle
+        this.ctx.fillStyle = powerUp.color;
+        this.ctx.beginPath();
+        this.ctx.arc(
+          (p.x + 0.5) * this.cellSize,
+          (p.y + 0.5) * this.cellSize,
+          this.cellSize / 3,
+          0,
+          Math.PI * 2
+        );
+        this.ctx.fill();
+        
+        // Draw power-up icon
+        this.ctx.fillStyle = 'white';
+        this.ctx.font = `${this.cellSize * 0.4}px Arial`;
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle';
+        this.ctx.fillText(
+          powerUp.icon,
+          (p.x + 0.5) * this.cellSize,
+          (p.y + 0.5) * this.cellSize
+        );
+      }
+    });
 
+    // Draw snakes with proper skins and effects
     this.snakes.forEach(snake => {
       if (!snake.isAlive) return;
-
+      
+      // Apply special rendering for invisible snakes
+      const isInvisible = snake.hasPowerUp("invisible");
+      const hasShield = snake.hasPowerUp("shield");
+      
       snake.body.forEach((segment, index) => {
-        const alpha = index === 0 ? 1 : 1 - (index / snake.body.length) * 0.6;
-        const alphaHex = Math.floor(alpha * 255).toString(16).padStart(2, '0');
-        this.ctx.fillStyle = `${snake.color}${alphaHex}`;
+        // Rainbow pattern
+        let color = snake.color;
+        if (snake.activePattern === "rainbow") {
+          const hue = (Date.now() / 20 + index * 10) % 360;
+          color = `hsl(${hue}, 70%, 60%)`;
+        }
         
+        // Calculate segment opacity
+        let alpha = 1;
+        if (isInvisible) {
+          alpha = 0.3; // Very transparent when invisible
+        } else {
+          alpha = index === 0 ? 1 : 1 - (index / snake.body.length) * 0.6;
+        }
+        
+        const alphaHex = Math.floor(alpha * 255).toString(16).padStart(2, '0');
+        this.ctx.fillStyle = `${color}${alphaHex}`;
+        
+        // Draw snake segment
         this.ctx.fillRect(
           segment.x * this.cellSize,
           segment.y * this.cellSize,
           this.cellSize,
           this.cellSize
         );
+        
+        // Draw patterns
+        if (snake.activePattern === "gradient" && index === 0) {
+          // Gradient effect on head
+          const gradient = this.ctx.createRadialGradient(
+            (segment.x + 0.5) * this.cellSize,
+            (segment.y + 0.5) * this.cellSize,
+            0,
+            (segment.x + 0.5) * this.cellSize,
+            (segment.y + 0.5) * this.cellSize,
+            this.cellSize
+          );
+          gradient.addColorStop(0, 'white');
+          gradient.addColorStop(1, color);
+          this.ctx.fillStyle = gradient;
+          this.ctx.fillRect(
+            segment.x * this.cellSize,
+            segment.y * this.cellSize,
+            this.cellSize,
+            this.cellSize
+          );
+        }
+        
+        // Pulse pattern
+        if (snake.activePattern === "pulse") {
+          const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 200);
+          this.ctx.globalAlpha = pulse;
+          this.ctx.fillStyle = "white";
+          this.ctx.fillRect(
+            segment.x * this.cellSize + this.cellSize * 0.25,
+            segment.y * this.cellSize + this.cellSize * 0.25,
+            this.cellSize * 0.5,
+            this.cellSize * 0.5
+          );
+          this.ctx.globalAlpha = 1;
+        }
       });
+      
+      // Draw glow effect
+      if (snake.glowEffect) {
+        const head = snake.body[0];
+        this.ctx.shadowBlur = 10;
+        this.ctx.shadowColor = snake.color;
+        this.ctx.fillRect(
+          head.x * this.cellSize,
+          head.y * this.cellSize,
+          this.cellSize,
+          this.cellSize
+        );
+        this.ctx.shadowBlur = 0;
+      }
+      
+      // Draw shield effect
+      if (hasShield) {
+        const head = snake.body[0];
+        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+        this.ctx.lineWidth = 2;
+        this.ctx.beginPath();
+        this.ctx.arc(
+          (head.x + 0.5) * this.cellSize,
+          (head.y + 0.5) * this.cellSize,
+          this.cellSize * 0.8,
+          0,
+          Math.PI * 2
+        );
+        this.ctx.stroke();
+      }
     });
   }
 
