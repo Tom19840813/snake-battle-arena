@@ -227,9 +227,83 @@ export class GameBoard {
       }
       
       if (newDifficulty !== this.difficulty) {
-        this.setDifficulty(newDifficulty);
+        this.difficulty = newDifficulty; // Changed from setDifficulty to direct assignment
       }
     }
+  }
+
+  setDifficulty(level: number) {
+    this.difficulty = level;
+  }
+
+  setPlayerMode(isPlayerMode: boolean) {
+    // We need to restart the game when changing modes
+    this.stop();
+    
+    // Clear existing snakes
+    this.snakes = [];
+    this.isPlayerMode = isPlayerMode;
+    
+    const predefinedColors = [
+      '#FF5252', // Red (Snake 1)
+      '#E6E633', // Yellow (Snake 2)
+      '#4CAF50', // Green (Snake 3)
+      '#26C6DA', // Cyan (Snake 4)
+      '#5C6BC0'  // Blue (Snake 5)
+    ];
+
+    // Remove existing keyboard listener if it exists
+    if (this.keyboardListener) {
+      window.removeEventListener('keydown', this.keyboardListener);
+      this.keyboardListener = null;
+    }
+
+    // Create player snake if in player mode
+    if (isPlayerMode) {
+      const playerPos = this.getRandomPosition();
+      this.playerSnake = new Snake(playerPos, predefinedColors[0], this.gridSize, true, 1);
+      this.snakes.push(this.playerSnake);
+      
+      this.keyboardListener = this.handleKeyDown.bind(this);
+      window.addEventListener('keydown', this.keyboardListener);
+      this.setupTouchControls();
+      
+      // Apply default skin
+      const defaultSkin = SKINS[0];
+      this.playerSkin = defaultSkin.id;
+      if (this.playerSnake) {
+        this.playerSnake.applySkin(
+          defaultSkin.id,
+          defaultSkin.color,
+          defaultSkin.pattern,
+          defaultSkin.glow
+        );
+      }
+    } else {
+      this.playerSnake = null;
+    }
+
+    // Add AI snakes
+    const aiCount = isPlayerMode ? 20 - 1 : 20;
+    for (let i = 0; i < aiCount; i++) {
+      const pos = this.getRandomPosition();
+      
+      const colorIndex = isPlayerMode ? i + 1 : i;
+      const color = colorIndex < 5 ? predefinedColors[colorIndex] : `hsl(${(colorIndex * 360) / 20}, 70%, 60%)`;
+      
+      const snakeDifficulty = i < 3 ? this.difficulty : Math.max(1, this.difficulty - 1);
+      this.snakes.push(new Snake(pos, color, this.gridSize, false, snakeDifficulty));
+    }
+
+    // Reset food and time
+    this.food = [];
+    for (let i = 0; i < 10; i++) {
+      this.spawnFood();
+    }
+    this.startTime = Date.now();
+    
+    // Restart the game
+    this.start();
   }
 
   private update() {

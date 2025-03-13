@@ -84,7 +84,7 @@ const Index = () => {
       window.removeEventListener('resize', updateCanvasSize);
       gameRef.current?.stop();
     };
-  }, [playerMode]);
+  }, []);  // Remove playerMode dependency to prevent recreation on toggle
 
   const togglePlayerMode = () => {
     setGameOver(false);
