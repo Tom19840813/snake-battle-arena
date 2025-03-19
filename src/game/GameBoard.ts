@@ -306,6 +306,16 @@ export class GameBoard {
     this.start();
   }
 
+  setPlayerDirection(direction: { x: number, y: number }) {
+    if (this.playerSnake && this.playerSnake.isAlive) {
+      this.playerSnake.setDirection(direction);
+    }
+  }
+
+  isPlayerAlive(): boolean {
+    return this.playerSnake !== null && this.playerSnake.isAlive;
+  }
+
   private update() {
     const now = performance.now();
     if (now - this.lastUpdate < this.updateInterval) return;
@@ -625,3 +635,4 @@ export class GameBoard {
     cancelAnimationFrame(this.animationFrame);
   }
 }
+

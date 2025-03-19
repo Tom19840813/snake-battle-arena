@@ -101,8 +101,8 @@ const Index = () => {
   };
 
   const handleDirectionButton = (direction: { x: number, y: number }) => {
-    if (gameRef.current?.playerSnake && !gameOver) {
-      gameRef.current.playerSnake.setDirection(direction);
+    if (gameRef.current && !gameOver) {
+      gameRef.current.setPlayerDirection(direction);
     }
   };
 
@@ -468,3 +468,4 @@ const Index = () => {
 };
 
 export default Index;
+
