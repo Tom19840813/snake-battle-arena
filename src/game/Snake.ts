@@ -1,3 +1,4 @@
+
 export interface Position {
   x: number;
   y: number;
@@ -33,6 +34,11 @@ export class Snake {
   public splitSnake: Snake | null = null;
   private baseSpeed: number = 1;
   private magnetRange: number = 5;
+  
+  // Alias property for compatibility with GameBoard.ts
+  get isPlayer(): boolean {
+    return this.isPlayerControlled;
+  }
 
   constructor(startPos: Position, color: string, gridSize: number, isPlayerControlled: boolean = false, difficulty: number = 1) {
     this.body = [startPos];
@@ -49,6 +55,11 @@ export class Snake {
       const abilities = ["teleport", "split", "magnet"];
       this.uniqueAbility = abilities[Math.floor(Math.random() * abilities.length)];
     }
+  }
+
+  // Add a method to set difficulty
+  setDifficulty(newDifficulty: number): void {
+    this.difficulty = newDifficulty;
   }
 
   // Apply a skin to the snake
