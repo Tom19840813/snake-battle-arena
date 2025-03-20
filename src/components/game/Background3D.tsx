@@ -43,7 +43,14 @@ function FloatingSnake() {
 
 function AnimatedSpheres() {
   const group = useRef<any>();
-  const texture = useTexture('/textures/matcap-gold.png');
+  
+  // Use a try-catch to handle texture loading errors
+  let matcapTexture;
+  try {
+    matcapTexture = useTexture('/textures/matcap-gold.png');
+  } catch (error) {
+    console.warn('Could not load matcap texture, using fallback color');
+  }
   
   useFrame(({ clock }) => {
     if (group.current) {
@@ -63,7 +70,11 @@ function AnimatedSpheres() {
           ]}
         >
           <sphereGeometry args={[0.3, 16, 16]} />
-          <meshMatcapMaterial color="white" matcap={texture} transparent opacity={0.6} />
+          {matcapTexture ? (
+            <meshMatcapMaterial color="white" matcap={matcapTexture} transparent opacity={0.6} />
+          ) : (
+            <meshStandardMaterial color="#ffd700" metalness={0.9} roughness={0.1} transparent opacity={0.6} />
+          )}
         </mesh>
       ))}
     </group>
@@ -73,7 +84,14 @@ function AnimatedSpheres() {
 export default function Background3D() {
   return (
     <div className="fixed inset-0 -z-10">
-      <Canvas style={{ background: 'linear-gradient(to bottom, #0f172a, #020617)' }}>
+      <Canvas 
+        style={{ background: 'linear-gradient(to bottom, #0f172a, #020617)' }}
+        gl={{ 
+          powerPreference: "high-performance",
+          antialias: true,
+          alpha: false 
+        }}
+      >
         <PerspectiveCamera makeDefault position={[0, 0, 20]} fov={40} />
         <ambientLight intensity={0.5} />
         <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} />
