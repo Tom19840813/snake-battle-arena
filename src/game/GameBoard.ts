@@ -34,6 +34,7 @@ export class GameBoard {
   private powerUpSpawnInterval: number = 10000; // 10 seconds
   private lastPowerUpSpawn: number = 0;
   private playerSkin: string = "default";
+  private totalOpponents: number = 20;
   
   public onStatsUpdate: ((stats: GameStats) => void) | null = null;
 
@@ -49,6 +50,7 @@ export class GameBoard {
     this.startTime = Date.now();
     this.isPlayerMode = isPlayerMode;
     this.difficulty = difficulty;
+    this.totalOpponents = numSnakes;
 
     const predefinedColors = [
       '#FF5252', // Red (Snake 1)
@@ -227,13 +229,21 @@ export class GameBoard {
       }
       
       if (newDifficulty !== this.difficulty) {
-        this.difficulty = newDifficulty; // Changed from setDifficulty to direct assignment
+        this.difficulty = newDifficulty;
       }
     }
   }
 
   setDifficulty(level: number) {
     this.difficulty = level;
+    
+    // Update existing snake difficulties
+    this.snakes.forEach((snake, index) => {
+      if (!snake.isPlayer) {
+        const snakeDifficulty = index < 3 ? this.difficulty : Math.max(1, this.difficulty - 1);
+        snake.setDifficulty(snakeDifficulty);
+      }
+    });
   }
 
   setPlayerMode(isPlayerMode: boolean) {
@@ -284,12 +294,12 @@ export class GameBoard {
     }
 
     // Add AI snakes
-    const aiCount = isPlayerMode ? 20 - 1 : 20;
+    const aiCount = isPlayerMode ? this.totalOpponents - 1 : this.totalOpponents;
     for (let i = 0; i < aiCount; i++) {
       const pos = this.getRandomPosition();
       
       const colorIndex = isPlayerMode ? i + 1 : i;
-      const color = colorIndex < 5 ? predefinedColors[colorIndex] : `hsl(${(colorIndex * 360) / 20}, 70%, 60%)`;
+      const color = colorIndex < 5 ? predefinedColors[colorIndex] : `hsl(${(colorIndex * 360) / this.totalOpponents}, 70%, 60%)`;
       
       const snakeDifficulty = i < 3 ? this.difficulty : Math.max(1, this.difficulty - 1);
       this.snakes.push(new Snake(pos, color, this.gridSize, false, snakeDifficulty));
@@ -333,10 +343,12 @@ export class GameBoard {
 
     // Update all snakes
     this.snakes.forEach(snake => {
-      snake.think(this.food, this.snakes.filter(s => s !== snake));
+      if (!snake.isPlayer) { // Only call AI think for non-player snakes
+        snake.think(this.food, this.snakes.filter(s => s !== snake));
+      }
     });
 
-    // Check player collision
+    // Check player collision with visual death effect
     if (this.playerSnake && this.playerSnake.isAlive) {
       const nextPos = {
         x: this.playerSnake.body[0].x + this.playerSnake.direction.x,
@@ -345,31 +357,31 @@ export class GameBoard {
       
       // Skip collision check if player has shield
       if (!this.playerSnake.hasPowerUp("shield")) {
-        if (
+        const hasCollided = 
           nextPos.x < 0 ||
           nextPos.x >= this.gridSize ||
           nextPos.y < 0 ||
-          nextPos.y >= this.gridSize
-        ) {
-          this.playerSnake.isAlive = false;
-        } 
-        else if (this.playerSnake.body.slice(1).some(segment => 
-          segment.x === nextPos.x && segment.y === nextPos.y
-        )) {
-          this.playerSnake.isAlive = false;
-        }
-        else if (this.snakes.filter(s => s !== this.playerSnake).some(snake => 
-          snake.isAlive && snake.body.some(segment => 
+          nextPos.y >= this.gridSize ||
+          this.playerSnake.body.slice(1).some(segment => 
             segment.x === nextPos.x && segment.y === nextPos.y
-          )
-        )) {
+          ) ||
+          this.snakes.filter(s => s !== this.playerSnake).some(snake => 
+            snake.isAlive && snake.body.some(segment => 
+              segment.x === nextPos.x && segment.y === nextPos.y
+            )
+          );
+        
+        if (hasCollided) {
           this.playerSnake.isAlive = false;
+          // Trigger death animation in the next game loop
         }
       }
     }
 
     // Move snakes and check for food/power-up consumption
     this.snakes.forEach(snake => {
+      if (!snake.isAlive) return;
+      
       const ate = snake.move(this.food);
       if (ate) {
         const foodIndex = this.food.findIndex(
@@ -519,7 +531,39 @@ export class GameBoard {
 
     // Draw snakes with proper skins and effects
     this.snakes.forEach(snake => {
-      if (!snake.isAlive) return;
+      if (!snake.isAlive) {
+        // If it's the player snake and just died, draw death animation
+        if (snake.isPlayer) {
+          const head = snake.body[0];
+          
+          // Draw explosion effect
+          const radius = Math.min(20, this.cellSize * 0.8);
+          const gradient = this.ctx.createRadialGradient(
+            (head.x + 0.5) * this.cellSize,
+            (head.y + 0.5) * this.cellSize,
+            0,
+            (head.x + 0.5) * this.cellSize,
+            (head.y + 0.5) * this.cellSize,
+            radius
+          );
+          gradient.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
+          gradient.addColorStop(0.2, 'rgba(255, 100, 100, 0.8)');
+          gradient.addColorStop(0.5, 'rgba(255, 50, 50, 0.6)');
+          gradient.addColorStop(1, 'rgba(100, 0, 0, 0)');
+          
+          this.ctx.fillStyle = gradient;
+          this.ctx.beginPath();
+          this.ctx.arc(
+            (head.x + 0.5) * this.cellSize,
+            (head.y + 0.5) * this.cellSize,
+            radius,
+            0,
+            Math.PI * 2
+          );
+          this.ctx.fill();
+        }
+        return;
+      }
       
       // Apply special rendering for invisible snakes
       const isInvisible = snake.hasPowerUp("invisible");
@@ -635,4 +679,3 @@ export class GameBoard {
     cancelAnimationFrame(this.animationFrame);
   }
 }
-

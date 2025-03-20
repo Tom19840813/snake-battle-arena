@@ -10,6 +10,9 @@ import { Badge } from '@/components/ui/badge';
 import { PowerUpState } from '../game/Snake';
 import { RefreshCw, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Trophy, Clock, Apple, Zap, ChevronUp, ChevronDown } from 'lucide-react';
 import Background3D from '../components/game/Background3D';
+import { DeathAnimation } from '../components/game/DeathAnimation';
+import { OpponentSelector } from '../components/game/OpponentSelector';
+import { Button } from '@/components/ui/button';
 
 interface LeaderboardItem {
   rank: number;
@@ -34,6 +37,7 @@ const Index = () => {
   const [activePowerUps, setActivePowerUps] = useState<PowerUpState[]>([]);
   const [showSkinSelector, setShowSkinSelector] = useState<boolean>(false);
   const [statsExpanded, setStatsExpanded] = useState<boolean>(true);
+  const [aiOpponentCount, setAiOpponentCount] = useState<number>(20);
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -51,7 +55,7 @@ const Index = () => {
     updateCanvasSize();
     window.addEventListener('resize', updateCanvasSize);
 
-    gameRef.current = new GameBoard(ctx, 20, playerMode, difficulty);
+    gameRef.current = new GameBoard(ctx, aiOpponentCount, playerMode, difficulty);
     
     gameRef.current.onStatsUpdate = (stats) => {
       setLeaderboard(stats.topSnakes.map((snake, index) => ({
@@ -83,7 +87,7 @@ const Index = () => {
       window.removeEventListener('resize', updateCanvasSize);
       gameRef.current?.stop();
     };
-  }, []);
+  }, [aiOpponentCount]);
 
   const togglePlayerMode = () => {
     setGameOver(false);
@@ -114,6 +118,48 @@ const Index = () => {
       gameRef.current.setPlayerSkin(skinId);
       setActiveSkin(skinId);
       setShowSkinSelector(false);
+    }
+  };
+  
+  const handleOpponentsChange = (count: number, newDifficulty: number) => {
+    setAiOpponentCount(count);
+    setDifficulty(newDifficulty);
+    
+    if (gameRef.current) {
+      gameRef.current.setDifficulty(newDifficulty);
+      // Restart with new opponent count
+      gameRef.current.stop();
+      
+      if (canvasRef.current) {
+        const ctx = canvasRef.current.getContext('2d');
+        if (ctx) {
+          gameRef.current = new GameBoard(ctx, count, playerMode, newDifficulty);
+          gameRef.current.onStatsUpdate = (stats) => {
+            setLeaderboard(stats.topSnakes.map((snake, index) => ({
+              rank: index + 1,
+              color: snake.color,
+              name: playerMode && index === 0 ? 'You' : `Snake ${index + 1}`,
+              score: snake.score
+            })));
+            
+            setActiveSnakes(stats.activeSnakes);
+            setFoodItems(stats.foodItems);
+            setElapsedTime(stats.elapsedTime);
+            setDifficulty(stats.difficulty);
+            setUnlockedSkins(stats.unlockedSkins);
+            setActivePowerUps(stats.activePowerUps || []);
+            
+            if (stats.playerScore !== null) {
+              setPlayerScore(stats.playerScore);
+              
+              if (playerMode && stats.topSnakes.length > 0 && stats.playerScore === 0) {
+                setGameOver(true);
+              }
+            }
+          };
+          gameRef.current.start();
+        }
+      }
     }
   };
 
@@ -155,15 +201,23 @@ const Index = () => {
                 : "Watch as AI-powered snakes compete for survival"}
             </p>
             
-            <div className="flex items-center justify-center mt-4 space-x-2">
-              <Label htmlFor="player-mode" className="text-neutral-300">AI Only</Label>
-              <Switch 
-                id="player-mode" 
-                checked={playerMode} 
-                onCheckedChange={togglePlayerMode}
-                className="data-[state=checked]:bg-green-500"
+            <div className="flex flex-wrap items-center justify-center mt-4 gap-4">
+              <div className="flex items-center space-x-2">
+                <Label htmlFor="player-mode" className="text-neutral-300">AI Only</Label>
+                <Switch 
+                  id="player-mode" 
+                  checked={playerMode} 
+                  onCheckedChange={togglePlayerMode}
+                  className="data-[state=checked]:bg-green-500"
+                />
+                <Label htmlFor="player-mode" className="text-neutral-300">Player vs AI</Label>
+              </div>
+              
+              <OpponentSelector 
+                onOpponentsChange={handleOpponentsChange}
+                currentOpponents={aiOpponentCount}
+                currentDifficulty={difficulty}
               />
-              <Label htmlFor="player-mode" className="text-neutral-300">Player vs AI</Label>
             </div>
           </div>
 
@@ -175,17 +229,7 @@ const Index = () => {
               />
               
               {gameOver && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 rounded-lg backdrop-blur-sm animate-fade-in">
-                  <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Game Over</h2>
-                  <p className="text-xl text-green-400 mb-6">Your score: {playerScore}</p>
-                  <button 
-                    onClick={restartGame}
-                    className="px-6 py-3 bg-green-600 text-white rounded-full hover:bg-green-700 transition-colors flex items-center gap-2 shadow-[0_0_15px_rgba(0,255,0,0.5)]"
-                  >
-                    <RefreshCw size={20} />
-                    Play Again
-                  </button>
-                </div>
+                <DeathAnimation score={playerScore || 0} onRestart={restartGame} />
               )}
               
               {playerMode && !gameOver && (
