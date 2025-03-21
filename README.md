@@ -1,4 +1,5 @@
-# Welcome to your Lovable project
+
+# Welcome to Snake Wars
 
 ## Project info
 
@@ -52,13 +53,14 @@ npm run dev
 
 ## What technologies are used for this project?
 
-This project is built with .
+This project is built with:
 
 - Vite
 - TypeScript
 - React
 - shadcn-ui
 - Tailwind CSS
+- Three.js with React Three Fiber
 
 ## How can I deploy this project?
 
@@ -72,7 +74,7 @@ We don't support custom domains (yet). If you want to deploy your project under 
   publish = "dist"           # Change to your actual output folder
 
 [build.environment]
-  NODE_VERSION = "18"  # Set this to match your project’s required Node.js version
+  NODE_VERSION = "18"  # Set this to match your project's required Node.js version
 
 [[redirects]]
   from = "/*"

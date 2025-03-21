@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from 'react';
 import { GameBoard } from '../game/GameBoard';
 import { Card } from '@/components/ui/card';
@@ -193,7 +192,7 @@ const Index = () => {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-8 animate-fade-in">
             <h1 className="text-4xl md:text-5xl font-bold text-white mb-2 drop-shadow-[0_0_10px_rgba(0,255,0,0.5)]">
-              Snake Battle Royale
+              Snake Wars
             </h1>
             <p className="text-neutral-300 mb-4">
               {playerMode 
