@@ -2,6 +2,104 @@
 import { useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { PerspectiveCamera, Float, Text3D, Center, useTexture, Stars, Sparkles } from '@react-three/drei';
+import * as THREE from 'three';
+
+function Planet() {
+  const planetRef = useRef<THREE.Mesh>(null);
+  const ringRef = useRef<THREE.Mesh>(null);
+  
+  // Use a simple pseudo-random pattern for the planet texture
+  const planetTexture = new THREE.DataTexture(
+    (() => {
+      const size = 128;
+      const data = new Uint8Array(size * size * 3);
+      for (let i = 0; i < size * size; i++) {
+        const r = Math.floor(Math.random() * 55) + 20;
+        const g = Math.floor(Math.random() * 80) + 70;
+        const b = Math.floor(Math.random() * 55) + 30;
+        
+        data[i * 3] = r;
+        data[i * 3 + 1] = g;
+        data[i * 3 + 2] = b;
+      }
+      return data;
+    })(),
+    128,
+    128,
+    THREE.RGBFormat
+  );
+  planetTexture.needsUpdate = true;
+  
+  useFrame(({ clock }) => {
+    if (planetRef.current) {
+      // Slow rotation for the planet
+      planetRef.current.rotation.y = clock.getElapsedTime() * 0.1;
+      // Slight wobble
+      planetRef.current.rotation.z = Math.sin(clock.getElapsedTime() * 0.2) * 0.05;
+    }
+    
+    if (ringRef.current) {
+      // Independent ring rotation
+      ringRef.current.rotation.z = clock.getElapsedTime() * 0.05;
+      // Make the ring hover/float
+      ringRef.current.position.y = Math.sin(clock.getElapsedTime() * 0.2) * 0.3;
+    }
+  });
+  
+  return (
+    <group position={[0, 0, -15]}>
+      {/* Main planet */}
+      <mesh ref={planetRef}>
+        <sphereGeometry args={[5, 32, 32]} />
+        <meshStandardMaterial 
+          map={planetTexture}
+          emissive="#166534"
+          emissiveIntensity={0.2}
+          roughness={0.8}
+          metalness={0.2}
+        />
+        
+        {/* Planet atmosphere glow */}
+        <mesh>
+          <sphereGeometry args={[5.2, 32, 32]} />
+          <meshStandardMaterial 
+            color="#4ade80"
+            transparent={true}
+            opacity={0.15}
+            emissive="#4ade80"
+            emissiveIntensity={0.3}
+          />
+        </mesh>
+      </mesh>
+      
+      {/* Ring system */}
+      <mesh ref={ringRef} rotation={[Math.PI / 4, 0, 0]}>
+        <torusGeometry args={[8, 0.3, 16, 100]} />
+        <meshStandardMaterial 
+          color="#4ade80"
+          emissive="#166534"
+          emissiveIntensity={0.5}
+          metalness={0.8}
+          roughness={0.3}
+        />
+      </mesh>
+      
+      {/* Second ring */}
+      <mesh rotation={[Math.PI / 3, Math.PI / 6, 0]}>
+        <torusGeometry args={[7, 0.2, 16, 100]} />
+        <meshStandardMaterial 
+          color="#34d399"
+          emissive="#166534"
+          emissiveIntensity={0.5}
+          metalness={0.8}
+          roughness={0.3}
+          transparent={true}
+          opacity={0.8}
+        />
+      </mesh>
+    </group>
+  );
+}
 
 function FloatingTitle() {
   const ref = useRef<any>();
@@ -138,6 +236,7 @@ export default function Background3D() {
         <FloatingTitle />
         <AnimatedSpheres />
         <AnimatedGrid />
+        <Planet />
         
         <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
         <Sparkles count={100} scale={10} size={1} speed={0.3} color="#4ade80" />

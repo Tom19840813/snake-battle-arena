@@ -129,6 +129,17 @@
   animation: float 5s ease-in-out infinite;
 }
 
+/* Slow spin animation for restart icon */
+@keyframes spin-slow {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 3s linear infinite;
+}
+
 /* Futuristic glass card */
 .glass-card {
   background: rgba(22, 101, 52, 0.1);
