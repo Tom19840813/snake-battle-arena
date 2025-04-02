@@ -10,23 +10,16 @@ interface DeathAnimationProps {
 }
 
 export function DeathAnimation({ score, onRestart }: DeathAnimationProps) {
-  const [showRestart, setShowRestart] = useState(false);
   const [showExplosion, setShowExplosion] = useState(true);
   
   useEffect(() => {
-    // First show the explosion effect
+    // Only show the explosion effect briefly
     const explosionTimer = setTimeout(() => {
       setShowExplosion(false);
     }, 1000);
     
-    // Then show the restart button
-    const restartTimer = setTimeout(() => {
-      setShowRestart(true);
-    }, 1800);
-    
     return () => {
       clearTimeout(explosionTimer);
-      clearTimeout(restartTimer);
     };
   }, []);
   
@@ -67,7 +60,7 @@ export function DeathAnimation({ score, onRestart }: DeathAnimationProps) {
             duration: 0.5,
             type: "spring",
             bounce: 0.5,
-            delay: 0.8
+            delay: 0.5
           }}
         >
           <motion.div 
@@ -121,7 +114,7 @@ export function DeathAnimation({ score, onRestart }: DeathAnimationProps) {
             className="text-3xl md:text-4xl font-bold text-white mb-3"
             initial={{ y: -20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 1.0, duration: 0.5 }}
+            transition={{ delay: 0.7, duration: 0.5 }}
           >
             Game Over
           </motion.h2>
@@ -130,7 +123,7 @@ export function DeathAnimation({ score, onRestart }: DeathAnimationProps) {
             className="flex items-center gap-2 mb-8 bg-black/50 px-4 py-2 rounded-full"
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 1.3, duration: 0.5 }}
+            transition={{ delay: 0.9, duration: 0.5 }}
           >
             <span className="text-neutral-300">Final Score:</span>
             <motion.span 
@@ -149,33 +142,29 @@ export function DeathAnimation({ score, onRestart }: DeathAnimationProps) {
             </motion.span>
           </motion.div>
           
-          <AnimatePresence>
-            {showRestart && (
-              <motion.div
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ 
-                  y: 0, 
-                  opacity: 1,
-                  transition: {
-                    type: "spring",
-                    stiffness: 300,
-                    damping: 15
-                  }
-                }}
-                exit={{ y: 20, opacity: 0 }}
-              >
-                <Button 
-                  onClick={onRestart}
-                  variant="pulse"
-                  size="lg"
-                  className="flex items-center gap-2 rounded-full shadow-[0_0_15px_rgba(0,255,0,0.5)]"
-                >
-                  <RefreshCw size={20} className="animate-spin-slow" />
-                  Play Again
-                </Button>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <motion.div
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ 
+              y: 0, 
+              opacity: 1,
+              transition: {
+                type: "spring",
+                stiffness: 300,
+                damping: 15,
+                delay: 1.0
+              }
+            }}
+          >
+            <Button 
+              onClick={onRestart}
+              variant="glow"
+              size="lg"
+              className="flex items-center gap-2 rounded-full shadow-[0_0_25px_rgba(0,255,0,0.7)] text-xl font-bold py-6 animate-pulse"
+            >
+              <RefreshCw size={24} className="animate-spin-slow" />
+              Play Again
+            </Button>
+          </motion.div>
         </motion.div>
       </AnimatePresence>
     </div>

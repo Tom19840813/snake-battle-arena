@@ -21,11 +21,13 @@ const buttonVariants = cva(
         link: "text-primary underline-offset-4 hover:underline",
         glow: "bg-green-600 text-white hover:bg-green-700 shadow-[0_0_15px_rgba(0,255,0,0.5)]",
         pulse: "bg-green-600 text-white hover:bg-green-700 shadow-[0_0_15px_rgba(0,255,0,0.5)] animate-pulse",
+        highlight: "bg-green-500 text-white hover:bg-green-600 shadow-[0_0_25px_rgba(0,255,0,0.8)] border-2 border-green-300",
       },
       size: {
         default: "h-10 px-4 py-2",
         sm: "h-9 rounded-md px-3",
         lg: "h-11 rounded-md px-8",
+        xl: "h-14 rounded-md px-10 py-6 text-lg",
         icon: "h-10 w-10",
       },
     },
