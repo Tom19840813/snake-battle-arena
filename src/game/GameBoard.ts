@@ -35,6 +35,7 @@ export class GameBoard {
   private lastPowerUpSpawn: number = 0;
   private playerSkin: string = "default";
   private totalOpponents: number = 20;
+  private playerDeathDetected: boolean = false;
   
   public onStatsUpdate: ((stats: GameStats) => void) | null = null;
 
@@ -372,8 +373,9 @@ export class GameBoard {
           );
         
         if (hasCollided) {
+          console.log("Player collision detected!");
           this.playerSnake.isAlive = false;
-          // Trigger death animation in the next game loop
+          this.playerDeathDetected = true; // Flag the death for immediate detection
         }
       }
     }
@@ -537,7 +539,7 @@ export class GameBoard {
           const head = snake.body[0];
           
           // Draw explosion effect
-          const radius = Math.min(20, this.cellSize * 0.8);
+          const radius = Math.min(20, this.cellSize * 1.5); // Increased size
           const gradient = this.ctx.createRadialGradient(
             (head.x + 0.5) * this.cellSize,
             (head.y + 0.5) * this.cellSize,
@@ -547,8 +549,8 @@ export class GameBoard {
             radius
           );
           gradient.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
-          gradient.addColorStop(0.2, 'rgba(255, 100, 100, 0.8)');
-          gradient.addColorStop(0.5, 'rgba(255, 50, 50, 0.6)');
+          gradient.addColorStop(0.2, 'rgba(255, 50, 50, 0.9)');  // More vibrant red
+          gradient.addColorStop(0.5, 'rgba(255, 0, 0, 0.7)');  // More vibrant red
           gradient.addColorStop(1, 'rgba(100, 0, 0, 0)');
           
           this.ctx.fillStyle = gradient;

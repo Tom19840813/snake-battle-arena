@@ -74,8 +74,12 @@ const Index = () => {
       if (stats.playerScore !== null) {
         setPlayerScore(stats.playerScore);
         
-        if (playerMode && stats.topSnakes.length > 0 && stats.playerScore === 0) {
-          setGameOver(true);
+        if (playerMode && !gameOver) {
+          const isPlayerAlive = gameRef.current?.isPlayerAlive() ?? false;
+          if (!isPlayerAlive) {
+            console.log("Player died! Showing death screen");
+            setGameOver(true);
+          }
         }
       }
     };
@@ -126,7 +130,6 @@ const Index = () => {
     
     if (gameRef.current) {
       gameRef.current.setDifficulty(newDifficulty);
-      // Restart with new opponent count
       gameRef.current.stop();
       
       if (canvasRef.current) {
@@ -227,8 +230,10 @@ const Index = () => {
                 className="w-full aspect-square rounded-lg bg-black/50 border border-green-900/30"
               />
               
-              {gameOver && (
-                <DeathAnimation score={playerScore || 0} onRestart={restartGame} />
+              {gameOver && playerMode && (
+                <div className="absolute inset-0 z-50">
+                  <DeathAnimation score={playerScore || 0} onRestart={restartGame} />
+                </div>
               )}
               
               {playerMode && !gameOver && (

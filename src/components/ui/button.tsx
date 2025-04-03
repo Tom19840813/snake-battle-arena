@@ -22,7 +22,7 @@ const buttonVariants = cva(
         glow: "bg-green-600 text-white hover:bg-green-700 shadow-[0_0_15px_rgba(0,255,0,0.5)]",
         pulse: "bg-green-600 text-white hover:bg-green-700 shadow-[0_0_15px_rgba(0,255,0,0.5)] animate-pulse",
         highlight: "bg-green-500 text-white hover:bg-green-600 shadow-[0_0_25px_rgba(0,255,0,0.8)] border-2 border-green-300",
-        gameOver: "bg-red-600 text-white hover:bg-red-700 shadow-[0_0_30px_rgba(255,0,0,0.8)] border-2 border-white animate-pulse-strong relative overflow-visible",
+        gameOver: "bg-red-600 text-white hover:bg-red-700 shadow-[0_0_30px_rgba(255,0,0,0.8)] border-2 border-white animate-[pulse_1.5s_ease-in-out_infinite] relative overflow-visible z-50",
       },
       size: {
         default: "h-10 px-4 py-2",
