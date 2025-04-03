@@ -194,7 +194,9 @@ const Index = () => {
       <div className="min-h-screen relative z-10 p-4 md:p-6">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-8 animate-fade-in">
-            <span style="display: inline-block; background: rgba(39, 39, 42, 0.5); padding: 0.25rem 1rem; border-radius: 9999px; color: #a1a1aa; font-size: 0.875rem; margin-bottom: 0.75rem;">
+            <span
+              className="inline-block bg-neutral-800/50 px-4 py-1 rounded-full text-neutral-400 text-sm mb-3"
+            >
               Autonomous Battle Arena
             </span>
             <h1 className="text-4xl md:text-5xl font-bold text-white mb-2 drop-shadow-[0_0_10px_rgba(0,255,0,0.5)]">
