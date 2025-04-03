@@ -194,6 +194,9 @@ const Index = () => {
       <div className="min-h-screen relative z-10 p-4 md:p-6">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-8 animate-fade-in">
+            <span style="display: inline-block; background: rgba(39, 39, 42, 0.5); padding: 0.25rem 1rem; border-radius: 9999px; color: #a1a1aa; font-size: 0.875rem; margin-bottom: 0.75rem;">
+              Autonomous Battle Arena
+            </span>
             <h1 className="text-4xl md:text-5xl font-bold text-white mb-2 drop-shadow-[0_0_10px_rgba(0,255,0,0.5)]">
               Snake Wars
             </h1>
@@ -220,6 +223,16 @@ const Index = () => {
                 currentOpponents={aiOpponentCount}
                 currentDifficulty={difficulty}
               />
+              
+              <Button 
+                onClick={restartGame}
+                variant="restart"
+                size="lg"
+                className="flex items-center gap-2 shadow-[0_0_15px_rgba(0,130,255,0.6)] animate-pulse"
+              >
+                <RefreshCw className="animate-spin-slow" />
+                Restart Game
+              </Button>
             </div>
           </div>
 
