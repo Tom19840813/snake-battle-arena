@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { GameBoard } from '../../game/GameBoard';
@@ -6,7 +5,7 @@ import { DeathAnimation } from './DeathAnimation';
 import { SkinSelector } from './SkinSelector';
 import { ControlsPanel } from './ControlsPanel';
 import { Badge } from '@/components/ui/badge';
-import { PowerUpState } from '../../game/Snake';
+import { PowerUpState } from '../../game/types';
 
 interface GameCanvasProps {
   playerMode: boolean;
@@ -37,7 +36,6 @@ export function GameCanvas({
   const gameRef = useRef<GameBoard | null>(null);
   const [showSkinSelector, setShowSkinSelector] = useState<boolean>(false);
 
-  // Effect to initialize and cleanup the game
   useEffect(() => {
     if (!canvasRef.current) return;
 
@@ -54,25 +52,20 @@ export function GameCanvas({
     updateCanvasSize();
     window.addEventListener('resize', updateCanvasSize);
 
-    // Clean up any existing game before creating a new one
     if (gameRef.current) {
       gameRef.current.stop();
       gameRef.current = null;
     }
 
-    // Create a new game instance
     gameRef.current = new GameBoard(ctx, aiOpponentCount, playerMode, difficulty);
     gameRef.current.onStatsUpdate = onStatsUpdate;
     
-    // Apply the selected skin
     if (activeSkin && gameRef.current) {
       gameRef.current.setPlayerSkin(activeSkin);
     }
     
-    // Start the game
     gameRef.current.start();
 
-    // Clean up function
     return () => {
       window.removeEventListener('resize', updateCanvasSize);
       if (gameRef.current) {
@@ -82,7 +75,6 @@ export function GameCanvas({
     };
   }, [aiOpponentCount, playerMode, difficulty, onStatsUpdate, activeSkin]);
 
-  // Effect to handle game over state
   useEffect(() => {
     if (gameOver && gameRef.current) {
       gameRef.current.stop();

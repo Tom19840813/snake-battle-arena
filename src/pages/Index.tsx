@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { SKINS, getUnlockedSkins } from '../game/GameAssets';
-import { PowerUpState } from '../game/Snake';
+import { PowerUpState } from '../game/types';
 import Background3D from '../components/game/Background3D';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';

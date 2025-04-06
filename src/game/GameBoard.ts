@@ -1,4 +1,5 @@
-import { Snake, Position, PowerUpState } from './Snake';
+import { Snake } from './Snake';
+import { Position, PowerUpState } from './types';
 import { POWER_UPS, SKINS, getUnlockedSkins } from './GameAssets';
 
 interface GameStats {
