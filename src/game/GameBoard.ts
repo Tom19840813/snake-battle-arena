@@ -23,9 +23,12 @@ export class GameBoard {
   private powerUpTypes: string[] = [];
   private gridSize: number;
   private cellSize: number;
-  private animationFrame: number;
-  private lastUpdate: number;
-  private updateInterval: number;
+  private animationFrame: number | null = null;
+  private lastFrameTime: number = 0;
+  private targetFPS: number = 60;
+  private frameInterval: number = 1000 / 60; // 60 FPS
+  private gameUpdateInterval: number = 100;
+  private timeSinceLastUpdate: number = 0;
   private startTime: number;
   private playerSnake: Snake | null = null;
   private isPlayerMode: boolean = false;
@@ -36,6 +39,7 @@ export class GameBoard {
   private playerSkin: string = "default";
   private totalOpponents: number = 20;
   private playerDeathDetected: boolean = false;
+  private isRunning: boolean = false;
   
   public onStatsUpdate: ((stats: GameStats) => void) | null = null;
 
@@ -45,9 +49,7 @@ export class GameBoard {
     this.cellSize = ctx.canvas.width / this.gridSize;
     this.snakes = [];
     this.food = [];
-    this.lastUpdate = 0;
-    this.updateInterval = 100; // Update every 100ms
-    this.animationFrame = 0;
+    this.lastFrameTime = 0;
     this.startTime = Date.now();
     this.isPlayerMode = isPlayerMode;
     this.difficulty = difficulty;
@@ -248,7 +250,7 @@ export class GameBoard {
   }
 
   setPlayerMode(isPlayerMode: boolean) {
-    // We need to restart the game when changing modes
+    // Stop the current game
     this.stop();
     
     // Clear existing snakes
@@ -327,94 +329,100 @@ export class GameBoard {
     return this.playerSnake !== null && this.playerSnake.isAlive;
   }
 
-  private update() {
-    const now = performance.now();
-    if (now - this.lastUpdate < this.updateInterval) return;
-    this.lastUpdate = now;
-
-    // Spawn power-ups periodically
-    if (now - this.lastPowerUpSpawn > this.powerUpSpawnInterval) {
-      this.spawnPowerUp();
-      this.lastPowerUpSpawn = now;
-    }
-
-    if (this.isPlayerMode) {
-      this.updateDifficultyBasedOnScore();
-    }
-
-    // Update all snakes
-    this.snakes.forEach(snake => {
-      if (!snake.isPlayer) { // Only call AI think for non-player snakes
-        snake.think(this.food, this.snakes.filter(s => s !== snake));
+  private update(deltaTime: number) {
+    // Accumulate time since last game update
+    this.timeSinceLastUpdate += deltaTime;
+    
+    // Only update game state at fixed intervals
+    if (this.timeSinceLastUpdate >= this.gameUpdateInterval) {
+      // Spawn power-ups periodically
+      const now = Date.now();
+      if (now - this.lastPowerUpSpawn > this.powerUpSpawnInterval) {
+        this.spawnPowerUp();
+        this.lastPowerUpSpawn = now;
       }
-    });
 
-    // Check player collision with visual death effect
-    if (this.playerSnake && this.playerSnake.isAlive) {
-      const nextPos = {
-        x: this.playerSnake.body[0].x + this.playerSnake.direction.x,
-        y: this.playerSnake.body[0].y + this.playerSnake.direction.y
-      };
-      
-      // Skip collision check if player has shield
-      if (!this.playerSnake.hasPowerUp("shield")) {
-        const hasCollided = 
-          nextPos.x < 0 ||
-          nextPos.x >= this.gridSize ||
-          nextPos.y < 0 ||
-          nextPos.y >= this.gridSize ||
-          this.playerSnake.body.slice(1).some(segment => 
-            segment.x === nextPos.x && segment.y === nextPos.y
-          ) ||
-          this.snakes.filter(s => s !== this.playerSnake).some(snake => 
-            snake.isAlive && snake.body.some(segment => 
+      if (this.isPlayerMode) {
+        this.updateDifficultyBasedOnScore();
+      }
+
+      // Update all snakes
+      this.snakes.forEach(snake => {
+        if (!snake.isPlayer) { // Only call AI think for non-player snakes
+          snake.think(this.food, this.snakes.filter(s => s !== snake));
+        }
+      });
+
+      // Check player collision with visual death effect
+      if (this.playerSnake && this.playerSnake.isAlive) {
+        const nextPos = {
+          x: this.playerSnake.body[0].x + this.playerSnake.direction.x,
+          y: this.playerSnake.body[0].y + this.playerSnake.direction.y
+        };
+        
+        // Skip collision check if player has shield
+        if (!this.playerSnake.hasPowerUp("shield")) {
+          const hasCollided = 
+            nextPos.x < 0 ||
+            nextPos.x >= this.gridSize ||
+            nextPos.y < 0 ||
+            nextPos.y >= this.gridSize ||
+            this.playerSnake.body.slice(1).some(segment => 
               segment.x === nextPos.x && segment.y === nextPos.y
-            )
-          );
-        
-        if (hasCollided) {
-          console.log("Player collision detected!");
-          this.playerSnake.isAlive = false;
-          this.playerDeathDetected = true; // Flag the death for immediate detection
-        }
-      }
-    }
-
-    // Move snakes and check for food/power-up consumption
-    this.snakes.forEach(snake => {
-      if (!snake.isAlive) return;
-      
-      const ate = snake.move(this.food);
-      if (ate) {
-        const foodIndex = this.food.findIndex(
-          f => f.x === snake.body[0].x && f.y === snake.body[0].y
-        );
-        this.food.splice(foodIndex, 1);
-        this.spawnFood();
-      }
-      
-      // Check for power-up pickup
-      if (snake.isAlive) {
-        const powerUpIndex = this.powerUps.findIndex(
-          p => p.x === snake.body[0].x && p.y === snake.body[0].y
-        );
-        
-        if (powerUpIndex !== -1) {
-          const powerUpType = this.powerUpTypes[powerUpIndex];
-          const powerUp = POWER_UPS.find(p => p.id === powerUpType);
+            ) ||
+            this.snakes.filter(s => s !== this.playerSnake).some(snake => 
+              snake.isAlive && snake.body.some(segment => 
+                segment.x === nextPos.x && segment.y === nextPos.y
+              )
+            );
           
-          if (powerUp) {
-            snake.addPowerUp(powerUp.id, powerUp.effect, powerUp.duration);
+          if (hasCollided) {
+            console.log("Player collision detected!");
+            this.playerSnake.isAlive = false;
+            this.playerDeathDetected = true; // Flag the death for immediate detection
           }
-          
-          // Remove the power-up
-          this.powerUps.splice(powerUpIndex, 1);
-          this.powerUpTypes.splice(powerUpIndex, 1);
         }
       }
-    });
 
-    this.updateStats();
+      // Move snakes and check for food/power-up consumption
+      this.snakes.forEach(snake => {
+        if (!snake.isAlive) return;
+        
+        const ate = snake.move(this.food);
+        if (ate) {
+          const foodIndex = this.food.findIndex(
+            f => f.x === snake.body[0].x && f.y === snake.body[0].y
+          );
+          this.food.splice(foodIndex, 1);
+          this.spawnFood();
+        }
+        
+        // Check for power-up pickup
+        if (snake.isAlive) {
+          const powerUpIndex = this.powerUps.findIndex(
+            p => p.x === snake.body[0].x && p.y === snake.body[0].y
+          );
+          
+          if (powerUpIndex !== -1) {
+            const powerUpType = this.powerUpTypes[powerUpIndex];
+            const powerUp = POWER_UPS.find(p => p.id === powerUpType);
+            
+            if (powerUp) {
+              snake.addPowerUp(powerUp.id, powerUp.effect, powerUp.duration);
+            }
+            
+            // Remove the power-up
+            this.powerUps.splice(powerUpIndex, 1);
+            this.powerUpTypes.splice(powerUpIndex, 1);
+          }
+        }
+      });
+
+      this.updateStats();
+      
+      // Reset the timer
+      this.timeSinceLastUpdate = 0;
+    }
   }
 
   private updateStats() {
@@ -667,17 +675,55 @@ export class GameBoard {
     });
   }
 
-  private gameLoop = () => {
-    this.update();
-    this.draw();
-    this.animationFrame = requestAnimationFrame(this.gameLoop);
+  private gameLoop = (timestamp: number) => {
+    if (!this.isRunning) return;
+    
+    // Calculate the time since the last frame
+    if (this.lastFrameTime === 0) {
+      this.lastFrameTime = timestamp;
+    }
+    const deltaTime = timestamp - this.lastFrameTime;
+    
+    // Limit to target frame rate
+    if (deltaTime >= this.frameInterval) {
+      // Update the game state based on the time passed
+      this.update(deltaTime);
+      
+      // Draw the current game state
+      this.draw();
+      
+      // Save the time of this frame
+      this.lastFrameTime = timestamp;
+    }
+    
+    // Request the next frame only if the game is still running
+    if (this.isRunning) {
+      this.animationFrame = requestAnimationFrame(this.gameLoop);
+    }
   };
 
   start() {
-    this.gameLoop();
+    // Prevent multiple game loops
+    if (this.isRunning) return;
+    
+    this.isRunning = true;
+    this.lastFrameTime = 0;
+    this.timeSinceLastUpdate = 0;
+    this.animationFrame = requestAnimationFrame(this.gameLoop);
   }
 
   stop() {
-    cancelAnimationFrame(this.animationFrame);
+    this.isRunning = false;
+    
+    if (this.animationFrame !== null) {
+      cancelAnimationFrame(this.animationFrame);
+      this.animationFrame = null;
+    }
+    
+    // Clean up event listeners
+    if (this.keyboardListener) {
+      window.removeEventListener('keydown', this.keyboardListener);
+      this.keyboardListener = null;
+    }
   }
 }

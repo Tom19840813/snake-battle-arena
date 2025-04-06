@@ -1,6 +1,5 @@
 
-import { useState, useRef } from 'react';
-import { GameBoard } from '../game/GameBoard';
+import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { SKINS, getUnlockedSkins } from '../game/GameAssets';
@@ -24,7 +23,6 @@ interface LeaderboardItem {
 }
 
 const Index = () => {
-  const gameRef = useRef<GameBoard | null>(null);
   const [leaderboard, setLeaderboard] = useState<LeaderboardItem[]>([]);
   const [activeSnakes, setActiveSnakes] = useState<number>(20);
   const [foodItems, setFoodItems] = useState<number>(10);
@@ -37,23 +35,19 @@ const Index = () => {
   const [activeSkin, setActiveSkin] = useState<string>("default");
   const [activePowerUps, setActivePowerUps] = useState<PowerUpState[]>([]);
   const [aiOpponentCount, setAiOpponentCount] = useState<number>(20);
+  const [gameKey, setGameKey] = useState<number>(0); // To force re-render of GameCanvas
 
   const togglePlayerMode = () => {
     setGameOver(false);
     setPlayerScore(null);
     setActiveSkin("default");
-    
-    if (gameRef.current) {
-      gameRef.current.setPlayerMode(!playerMode);
-    }
     setPlayerMode(!playerMode);
+    setGameKey(prev => prev + 1); // Force re-render
   };
 
   const restartGame = () => {
     setGameOver(false);
-    if (gameRef.current) {
-      gameRef.current.setPlayerMode(playerMode);
-    }
+    setGameKey(prev => prev + 1); // Force re-render
   };
 
   const handleStatsUpdate = (stats: any) => {
@@ -74,12 +68,9 @@ const Index = () => {
     if (stats.playerScore !== null) {
       setPlayerScore(stats.playerScore);
       
-      if (playerMode && !gameOver) {
-        const isPlayerAlive = gameRef.current?.isPlayerAlive() ?? false;
-        if (!isPlayerAlive) {
-          console.log("Player died! Showing death screen");
-          setGameOver(true);
-        }
+      if (playerMode && !gameOver && !stats.isPlayerAlive) {
+        console.log("Player died! Showing death screen");
+        setGameOver(true);
       }
     }
   };
@@ -87,11 +78,7 @@ const Index = () => {
   const handleOpponentsChange = (count: number, newDifficulty: number) => {
     setAiOpponentCount(count);
     setDifficulty(newDifficulty);
-    
-    if (gameRef.current) {
-      gameRef.current.setDifficulty(newDifficulty);
-      gameRef.current.stop();
-    }
+    setGameKey(prev => prev + 1); // Force re-render
   };
 
   const handleSkinChange = (skinId: string) => {
@@ -127,6 +114,7 @@ const Index = () => {
 
           <div className="grid lg:grid-cols-[1fr,300px] gap-6">
             <GameCanvas 
+              key={gameKey} // Important: Force a complete re-render when game changes
               playerMode={playerMode}
               gameOver={gameOver}
               aiOpponentCount={aiOpponentCount}

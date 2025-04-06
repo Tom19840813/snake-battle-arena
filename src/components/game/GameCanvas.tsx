@@ -37,6 +37,7 @@ export function GameCanvas({
   const gameRef = useRef<GameBoard | null>(null);
   const [showSkinSelector, setShowSkinSelector] = useState<boolean>(false);
 
+  // Effect to initialize and cleanup the game
   useEffect(() => {
     if (!canvasRef.current) return;
 
@@ -53,17 +54,40 @@ export function GameCanvas({
     updateCanvasSize();
     window.addEventListener('resize', updateCanvasSize);
 
+    // Clean up any existing game before creating a new one
+    if (gameRef.current) {
+      gameRef.current.stop();
+      gameRef.current = null;
+    }
+
+    // Create a new game instance
     gameRef.current = new GameBoard(ctx, aiOpponentCount, playerMode, difficulty);
-    
     gameRef.current.onStatsUpdate = onStatsUpdate;
     
+    // Apply the selected skin
+    if (activeSkin && gameRef.current) {
+      gameRef.current.setPlayerSkin(activeSkin);
+    }
+    
+    // Start the game
     gameRef.current.start();
 
+    // Clean up function
     return () => {
       window.removeEventListener('resize', updateCanvasSize);
-      gameRef.current?.stop();
+      if (gameRef.current) {
+        gameRef.current.stop();
+        gameRef.current = null;
+      }
     };
-  }, [aiOpponentCount, playerMode, difficulty, onStatsUpdate]);
+  }, [aiOpponentCount, playerMode, difficulty, onStatsUpdate, activeSkin]);
+
+  // Effect to handle game over state
+  useEffect(() => {
+    if (gameOver && gameRef.current) {
+      gameRef.current.stop();
+    }
+  }, [gameOver]);
 
   const handleDirectionButton = (direction: { x: number, y: number }) => {
     if (gameRef.current && !gameOver) {
