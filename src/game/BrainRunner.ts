@@ -21,7 +21,7 @@ export class BrainRunner {
   private animationFrame: number | null = null;
   private lastFrameTime: number = 0;
   private groundY: number;
-  private groundSpeed: number = 5;
+  private groundSpeed: number = 3; // Reduced from 5 to 3 (40% reduction)
   private groundPos: number = 0;
   private factDisplayed: boolean = false;
   
@@ -203,6 +203,7 @@ export class BrainRunner {
     this.gameState.isRunning = true;
     this.gameState.score = 0;
     this.gameState.distance = 0;
+    this.gameState.speed = 2.75; // Reduced from 5 to 2.75 (45% reduction)
     
     // Add the daily fact collectible
     if (this.gameState.currentFact && !this.factDisplayed) {
@@ -255,19 +256,19 @@ export class BrainRunner {
     // Update collectibles
     this.updateCollectibles(deltaTime);
     
-    // Spawn obstacles randomly
-    if (Math.random() < 0.01) {
+    // Spawn obstacles randomly (reduced frequency)
+    if (Math.random() < 0.007) { // Reduced from 0.01 to 0.007
       this.spawnObstacle();
     }
     
-    // Increase speed over time
-    this.gameState.speed += 0.001;
+    // Increase speed over time (slower progression)
+    this.gameState.speed += 0.0005; // Reduced from 0.001 to 0.0005
   }
   
   private updateCharacter(deltaTime: number): void {
     // Handle gravity
     if (this.character.isJumping) {
-      this.character.velocityY += 0.6; // Gravity
+      this.character.velocityY += 0.4; // Reduced from 0.6 to 0.4 (33% reduction)
       this.character.y += this.character.velocityY;
       
       // Check if landed
