@@ -6,7 +6,8 @@ import { SKINS, getUnlockedSkins } from '../game/GameAssets';
 import { PowerUpState } from '../game/types';
 import Background3D from '../components/game/Background3D';
 import { Button } from '@/components/ui/button';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Brain } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 // Import components
 import { LeaderboardCard } from '../components/game/LeaderboardCard';
@@ -90,16 +91,27 @@ const Index = () => {
       <Background3D />
       <div className="min-h-screen relative z-10 p-4 md:p-6">
         <div className="max-w-6xl mx-auto">
-          {/* Restart button at the top */}
-          <div className="flex justify-center mb-4">
+          {/* Games Selector */}
+          <div className="flex justify-center mb-8 gap-4">
+            <Link to="/brain-runner">
+              <Button 
+                variant="highlight"
+                size="lg"
+                className="flex items-center gap-2 animate-pulse"
+              >
+                <Brain className="animate-bounce" />
+                Play Brain Runner
+              </Button>
+            </Link>
+            
             <Button 
               onClick={restartGame}
               variant="restart"
               size="lg"
-              className="flex items-center gap-2 shadow-[0_0_15px_rgba(0,130,255,0.6)] animate-pulse"
+              className="flex items-center gap-2 shadow-[0_0_15px_rgba(0,130,255,0.6)]"
             >
               <RefreshCw className="animate-spin-slow" />
-              Restart Game
+              Restart Snake Game
             </Button>
           </div>
           
