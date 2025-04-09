@@ -1,7 +1,7 @@
 
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { PowerUpState } from '../../game/Snake';
+import { PowerUpState } from '../../game/types';
 
 interface PowerUpsDisplayProps {
   activePowerUps: PowerUpState[];

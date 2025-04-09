@@ -1,5 +1,4 @@
-
-import { Position } from '../types';
+import { Position, Direction } from '../types';
 import { Snake } from '../Snake';
 
 // Pathfinding utility functions
