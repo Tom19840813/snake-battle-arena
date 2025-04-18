@@ -7,7 +7,12 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "*": ["./src/*"],
+      "src/game/*": ["./src/game/*"],
+      "src/ai/*": ["./src/ai/*"],
+      "src/utils/*": ["./src/utils/*"],
+      "src/powers/*": ["./src/powers/*"],
+      "./types": ["./src/game/types.ts"]
     },
     "noImplicitAny": false,
     "noUnusedParameters": false,
