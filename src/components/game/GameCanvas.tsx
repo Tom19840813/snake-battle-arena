@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { GameBoard } from '../../game/GameBoard';
@@ -18,6 +19,7 @@ interface GameCanvasProps {
   onStatsUpdate: (stats: any) => void;
   onRestartGame: () => void;
   onSkinChange: (skinId: string) => void;
+  gameSpeed?: number;
 }
 
 export function GameCanvas({
@@ -30,7 +32,8 @@ export function GameCanvas({
   activePowerUps,
   onStatsUpdate,
   onRestartGame,
-  onSkinChange
+  onSkinChange,
+  gameSpeed = 1
 }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameRef = useRef<GameBoard | null>(null);
@@ -44,7 +47,9 @@ export function GameCanvas({
     if (!ctx) return;
 
     const updateCanvasSize = () => {
-      const size = Math.min(window.innerWidth - 40, 800);
+      // Limit canvas size for better performance on mobile
+      const maxSize = Math.min(800, window.innerWidth - 40);
+      const size = Math.min(window.innerWidth - 40, maxSize);
       canvas.width = size;
       canvas.height = size;
     };
@@ -64,6 +69,11 @@ export function GameCanvas({
       gameRef.current.setPlayerSkin(activeSkin);
     }
     
+    // Set game speed if available
+    if (gameRef.current && gameSpeed) {
+      gameRef.current.setGameSpeed(gameSpeed);
+    }
+    
     gameRef.current.start();
 
     return () => {
@@ -73,7 +83,7 @@ export function GameCanvas({
         gameRef.current = null;
       }
     };
-  }, [aiOpponentCount, playerMode, difficulty, onStatsUpdate, activeSkin]);
+  }, [aiOpponentCount, playerMode, difficulty, onStatsUpdate, activeSkin, gameSpeed]);
 
   useEffect(() => {
     if (gameOver && gameRef.current) {
@@ -141,6 +151,20 @@ export function GameCanvas({
           )}>
             {getDifficultyLabel(difficulty)}
           </span>
+          
+          {gameSpeed !== 1 && (
+            <>
+              <div className="w-1 h-6 bg-neutral-600 rounded-full mx-1"></div>
+              <span className={cn(
+                "text-sm px-2 py-0.5 rounded-md font-medium",
+                gameSpeed === 0.5 ? "bg-blue-600/70 text-blue-100" :
+                gameSpeed === 2 ? "bg-red-600/70 text-red-100" :
+                "bg-purple-600/70 text-purple-100"
+              )}>
+                {gameSpeed === 0.5 ? "Slow" : gameSpeed === 2 ? "Fast" : "Normal"} Speed
+              </span>
+            </>
+          )}
         </div>
       )}
       

@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -143,12 +142,19 @@
                 };
 
                 if (this.wouldCollide(nextPos, otherSnakes)) {
+                    // Try to find a safe direction with reduced computation
                     const alternatives = [
                         { x: 1, y: 0 },
                         { x: -1, y: 0 },
                         { x: 0, y: 1 },
                         { x: 0, y: -1 }
                     ];
+
+                    // Shuffle alternatives to avoid predictable patterns
+                    for (let i = alternatives.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [alternatives[i], alternatives[j]] = [alternatives[j], alternatives[i]];
+                    }
 
                     for (const alt of alternatives) {
                         const altPos = {
@@ -238,7 +244,7 @@
                 this.canvas = canvas;
                 this.ctx = canvas.getContext('2d');
                 this.gridSize = 40;
-                this.updateInterval = 100;
+                this.updateInterval = 150; // Slower update interval (was 100)
                 this.lastUpdate = 0;
                 this.startTime = Date.now();
                 
@@ -367,8 +373,15 @@
                 if (now - this.lastUpdate < this.updateInterval) return;
                 this.lastUpdate = now;
 
-                // Update snake AI
-                this.snakes.forEach(snake => {
+                // Optimize AI processing
+                // Only update a subset of snakes each frame for better performance
+                const activeSnakes = this.snakes.filter(s => s.isAlive);
+                const snakesToUpdate = activeSnakes.length <= 10 ? 
+                    activeSnakes : 
+                    activeSnakes.filter((_, i) => i % 2 === (Math.floor(now / 300) % 2));
+                
+                // Update snake AI for the selected subset
+                snakesToUpdate.forEach(snake => {
                     snake.think(this.food, this.snakes.filter(s => s !== snake));
                 });
 
@@ -445,9 +458,9 @@
             };
         }
 
-        // Initialize the game
+        // Initialize the game with fewer snakes for better performance
         const canvas = document.getElementById('gameCanvas');
-        new GameBoard(canvas);
+        new GameBoard(canvas, 15); // Reduced from 20 to 15 snakes
     </script>
 </body>
 </html>

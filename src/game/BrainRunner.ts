@@ -21,9 +21,10 @@ export class BrainRunner {
   private animationFrame: number | null = null;
   private lastFrameTime: number = 0;
   private groundY: number;
-  private groundSpeed: number = 3; // Reduced from 5 to 3 (40% reduction)
+  private groundSpeed: number = 1.5; // Further reduced from 3 to 1.5 (50% reduction)
   private groundPos: number = 0;
   private factDisplayed: boolean = false;
+  private maxSpeed: number = 4.5; // Add a cap to maximum speed
   
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -38,7 +39,7 @@ export class BrainRunner {
       isRunning: false,
       score: 0,
       distance: 0,
-      speed: 5,
+      speed: 1.5, // Reduced initial speed from 2.75 to 1.5 (45% reduction)
       facts: [],
       currentFact: null
     };
@@ -175,7 +176,7 @@ export class BrainRunner {
       
       if (!this.character.isJumping) {
         this.character.isJumping = true;
-        this.character.velocityY = -15;
+        this.character.velocityY = -12; // Reduced jump velocity from -15 to -12
         if (this.assets.sounds.jump) {
           this.assets.sounds.jump.play().catch(err => console.error('Audio playback error:', err));
         }
@@ -203,7 +204,7 @@ export class BrainRunner {
     this.gameState.isRunning = true;
     this.gameState.score = 0;
     this.gameState.distance = 0;
-    this.gameState.speed = 2.75; // Reduced from 5 to 2.75 (45% reduction)
+    this.gameState.speed = 1.5; // Reduced initial speed from 2.75 to 1.5
     
     // Add the daily fact collectible
     if (this.gameState.currentFact && !this.factDisplayed) {
@@ -230,8 +231,11 @@ export class BrainRunner {
     const deltaTime = timestamp - this.lastFrameTime;
     this.lastFrameTime = timestamp;
     
+    // Limit delta time to prevent large jumps after tab switch or lag
+    const limitedDeltaTime = Math.min(deltaTime, 100) / 1000; // Convert to seconds and cap at 100ms
+    
     // Update
-    this.update(deltaTime / 1000); // Convert to seconds
+    this.update(limitedDeltaTime);
     
     // Render
     this.render();
@@ -256,19 +260,21 @@ export class BrainRunner {
     // Update collectibles
     this.updateCollectibles(deltaTime);
     
-    // Spawn obstacles randomly (reduced frequency)
-    if (Math.random() < 0.007) { // Reduced from 0.01 to 0.007
+    // Spawn obstacles less frequently
+    if (Math.random() < 0.005) { // Reduced from 0.007 to 0.005
       this.spawnObstacle();
     }
     
-    // Increase speed over time (slower progression)
-    this.gameState.speed += 0.0005; // Reduced from 0.001 to 0.0005
+    // Increase speed more gradually and cap it
+    if (this.gameState.speed < this.maxSpeed) {
+      this.gameState.speed += 0.0002; // Reduced from 0.0005 to 0.0002
+    }
   }
   
   private updateCharacter(deltaTime: number): void {
-    // Handle gravity
+    // Handle gravity with reduced acceleration
     if (this.character.isJumping) {
-      this.character.velocityY += 0.4; // Reduced from 0.6 to 0.4 (33% reduction)
+      this.character.velocityY += 0.25; // Reduced from 0.4 to 0.25 (37% reduction)
       this.character.y += this.character.velocityY;
       
       // Check if landed
@@ -279,8 +285,8 @@ export class BrainRunner {
       }
     }
     
-    // Animate the character
-    if (performance.now() % 200 < 100) {
+    // Animate the character at a slower rate
+    if (performance.now() % 300 < 150) { // Slowed down from 200ms to 300ms
       this.character.frame = (this.character.frame + 1) % 2;
     }
     
