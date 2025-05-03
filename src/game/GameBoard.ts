@@ -727,4 +727,9 @@ export class GameBoard {
       this.keyboardListener = null;
     }
   }
+
+  setGameSpeed(speed: number) {
+    this.gameUpdateInterval = Math.floor(100 / speed); // Adjust update interval based on speed
+    console.log(`Game speed set to ${speed}, update interval: ${this.gameUpdateInterval}ms`);
+  }
 }

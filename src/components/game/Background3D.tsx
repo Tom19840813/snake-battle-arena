@@ -1,5 +1,4 @@
-
-import { useRef, useMemo } from 'react';
+import { useRef, useMemo, useState, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { PerspectiveCamera, Float, Text3D, Center, useTexture, Stars } from '@react-three/drei';
 import * as THREE from 'three';
@@ -238,14 +237,17 @@ function AnimatedGrid() {
   );
 }
 
-export default function Background3D() {
-  // Use low quality settings for better performance
+interface Background3DProps {
+  quality?: 'low' | 'medium' | 'high';
+}
+
+export default function Background3D({ quality = 'low' }: Background3DProps) {
   const [isLowQuality, setIsLowQuality] = useState(true);
   
   useEffect(() => {
     // Check if device is likely high-performance
     const isHighPerformance = window.navigator.hardwareConcurrency > 4;
-    setIsLowQuality(!isHighPerformance);
+    setIsLowQuality(quality === 'low' || (!isHighPerformance && quality === 'medium'));
     
     // Let user toggle quality with "Q" key
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -256,7 +258,7 @@ export default function Background3D() {
     
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [quality]);
 
   return (
     <div className="fixed inset-0 -z-10">
