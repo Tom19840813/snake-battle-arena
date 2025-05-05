@@ -21,7 +21,7 @@ export function PerformanceOptions({
   const [quality, setQuality] = useState<'low' | 'medium' | 'high'>('medium');
   const [snakeCount, setSnakeCount] = useState(15);
   const [hideBackground, setHideBackground] = useState(false);
-  const [gameSpeed, setGameSpeed] = useState(1);
+  const [gameSpeed, setGameSpeed] = useState(0.5); // Changed default to 0.5 (slower)
 
   const handleQualityChange = (newQuality: 'low' | 'medium' | 'high') => {
     setQuality(newQuality);
@@ -43,6 +43,14 @@ export function PerformanceOptions({
     const speed = value[0];
     setGameSpeed(speed);
     onGameSpeedChange(speed);
+  };
+
+  // Helper function to get speed label
+  const getSpeedLabel = (speed: number) => {
+    if (speed <= 0.25) return 'Very Slow';
+    if (speed <= 0.5) return 'Slow';
+    if (speed <= 0.75) return 'Medium';
+    return 'Normal';
   };
 
   return (
@@ -119,14 +127,14 @@ export function PerformanceOptions({
           <div className="flex justify-between">
             <p className="text-sm text-neutral-400">Game Speed</p>
             <span className="text-sm text-white">
-              {gameSpeed === 0.5 ? 'Slow' : gameSpeed === 1 ? 'Normal' : 'Fast'}
+              {getSpeedLabel(gameSpeed)}
             </span>
           </div>
           <Slider
-            defaultValue={[1]}
-            max={2}
-            min={0.5}
-            step={0.5}
+            defaultValue={[0.5]} // Changed default to 0.5
+            max={1}              // Reduced max from 2 to 1
+            min={0.25}           // Reduced min from 0.5 to 0.25
+            step={0.25}          // Changed step to 0.25 for more granular control
             value={[gameSpeed]}
             onValueChange={handleGameSpeedChange}
             className="w-full"

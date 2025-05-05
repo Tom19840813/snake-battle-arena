@@ -729,7 +729,8 @@ export class GameBoard {
   }
 
   setGameSpeed(speed: number) {
-    this.gameUpdateInterval = Math.floor(100 / speed); // Adjust update interval based on speed
+    // Change base interval from 100ms to 300ms for more manageable speed
+    this.gameUpdateInterval = Math.floor(300 / speed); // Adjust update interval based on speed
     console.log(`Game speed set to ${speed}, update interval: ${this.gameUpdateInterval}ms`);
   }
 }

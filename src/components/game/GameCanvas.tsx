@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { GameBoard } from '../../game/GameBoard';
@@ -33,7 +32,7 @@ export function GameCanvas({
   onStatsUpdate,
   onRestartGame,
   onSkinChange,
-  gameSpeed = 1
+  gameSpeed = 0.5 // Changed default from 1 to 0.5
 }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameRef = useRef<GameBoard | null>(null);
@@ -126,6 +125,13 @@ export function GameCanvas({
     }
   };
 
+  const getSpeedLabel = (speed: number) => {
+    if (speed <= 0.25) return "Very Slow";
+    if (speed <= 0.5) return "Slow";
+    if (speed <= 0.75) return "Medium";
+    return "Normal";
+  };
+
   return (
     <div className="p-4 bg-black/30 backdrop-blur-xl border-green-900/30 relative overflow-hidden shadow-[0_0_25px_rgba(0,200,0,0.2)]">
       <canvas
@@ -152,16 +158,17 @@ export function GameCanvas({
             {getDifficultyLabel(difficulty)}
           </span>
           
-          {gameSpeed !== 1 && (
+          {gameSpeed !== 0.5 && (
             <>
               <div className="w-1 h-6 bg-neutral-600 rounded-full mx-1"></div>
               <span className={cn(
                 "text-sm px-2 py-0.5 rounded-md font-medium",
-                gameSpeed === 0.5 ? "bg-blue-600/70 text-blue-100" :
-                gameSpeed === 2 ? "bg-red-600/70 text-red-100" :
+                gameSpeed === 0.25 ? "bg-blue-600/70 text-blue-100" :
+                gameSpeed === 0.75 ? "bg-yellow-600/70 text-yellow-100" :
+                gameSpeed === 1 ? "bg-red-600/70 text-red-100" :
                 "bg-purple-600/70 text-purple-100"
               )}>
-                {gameSpeed === 0.5 ? "Slow" : gameSpeed === 2 ? "Fast" : "Normal"} Speed
+                {getSpeedLabel(gameSpeed)} Speed
               </span>
             </>
           )}

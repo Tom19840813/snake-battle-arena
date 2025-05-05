@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { PowerUpState } from '../game/types';
 
@@ -26,7 +25,7 @@ export function useSnakeGameState() {
   const [showPerformanceOptions, setShowPerformanceOptions] = useState<boolean>(false);
   const [graphicsQuality, setGraphicsQuality] = useState<'low' | 'medium' | 'high'>('low');
   const [hideBackground, setHideBackground] = useState<boolean>(false);
-  const [gameSpeed, setGameSpeed] = useState<number>(1);
+  const [gameSpeed, setGameSpeed] = useState<number>(0.5); // Changed default from 1 to 0.5
 
   const togglePlayerMode = () => {
     setGameOver(false);
