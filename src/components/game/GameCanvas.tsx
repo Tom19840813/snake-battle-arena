@@ -69,7 +69,7 @@ export function GameCanvas({
       gameRef.current.setPlayerSkin(activeSkin);
     }
     
-    // Set game speed if available
+    // Ensure we use the setGameSpeed method correctly
     if (gameRef.current && gameSpeed) {
       gameRef.current.setGameSpeed(gameSpeed);
     }

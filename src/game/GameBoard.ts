@@ -42,7 +42,7 @@ export class GameBoard {
   private playerDeathDetected: boolean = false;
   private isRunning: boolean = false;
   
-  public onStatsUpdate: ((stats: GameStats) => void) | null = null;
+  public onStatsUpdate: ((stats: any) => void) | null = null;
 
   constructor(ctx: CanvasRenderingContext2D, numSnakes: number = 20, isPlayerMode: boolean = false, difficulty: number = 1) {
     this.ctx = ctx;
