@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { GameBoard } from '../../game/GameBoard';
@@ -32,11 +33,12 @@ export function GameCanvas({
   onStatsUpdate,
   onRestartGame,
   onSkinChange,
-  gameSpeed = 0.5 // Changed default from 1 to 0.5
+  gameSpeed = 0.5
 }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameRef = useRef<GameBoard | null>(null);
   const [showSkinSelector, setShowSkinSelector] = useState<boolean>(false);
+  const prevGameSpeedRef = useRef<number>(gameSpeed);
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -46,7 +48,6 @@ export function GameCanvas({
     if (!ctx) return;
 
     const updateCanvasSize = () => {
-      // Limit canvas size for better performance on mobile
       const maxSize = Math.min(800, window.innerWidth - 40);
       const size = Math.min(window.innerWidth - 40, maxSize);
       canvas.width = size;
@@ -68,9 +69,10 @@ export function GameCanvas({
       gameRef.current.setPlayerSkin(activeSkin);
     }
     
-    // Ensure we use the setGameSpeed method correctly
-    if (gameRef.current && gameSpeed) {
+    // Only set game speed if it has changed
+    if (gameRef.current && gameSpeed !== prevGameSpeedRef.current) {
       gameRef.current.setGameSpeed(gameSpeed);
+      prevGameSpeedRef.current = gameSpeed;
     }
     
     gameRef.current.start();
@@ -82,7 +84,15 @@ export function GameCanvas({
         gameRef.current = null;
       }
     };
-  }, [aiOpponentCount, playerMode, difficulty, onStatsUpdate, activeSkin, gameSpeed]);
+  }, [aiOpponentCount, playerMode, difficulty, onStatsUpdate, activeSkin]);
+
+  // Handle game speed changes separately to avoid recreating the entire game
+  useEffect(() => {
+    if (gameRef.current && gameSpeed !== prevGameSpeedRef.current) {
+      gameRef.current.setGameSpeed(gameSpeed);
+      prevGameSpeedRef.current = gameSpeed;
+    }
+  }, [gameSpeed]);
 
   useEffect(() => {
     if (gameOver && gameRef.current) {
@@ -106,37 +116,40 @@ export function GameCanvas({
 
   const getDifficultyLabel = (level: number) => {
     switch (level) {
-      case 1: return "Easy";
-      case 2: return "Medium";
-      case 3: return "Hard";
-      default: return "Easy";
+      case 1: return "EASY";
+      case 2: return "MEDIUM";
+      case 3: return "HARD";
+      default: return "EASY";
     }
   };
 
   const getPowerUpName = (effect: string) => {
     switch (effect) {
-      case "speed": return "Speed Boost";
-      case "shield": return "Shield";
-      case "invisible": return "Invisibility";
-      case "magnet": return "Food Magnet";
-      case "teleport": return "Teleport";
-      case "split": return "Split";
-      default: return effect;
+      case "speed": return "SPEED BOOST";
+      case "shield": return "SHIELD";
+      case "invisible": return "INVISIBILITY";
+      case "magnet": return "FOOD MAGNET";
+      case "teleport": return "TELEPORT";
+      case "split": return "SPLIT";
+      default: return effect.toUpperCase();
     }
   };
 
   const getSpeedLabel = (speed: number) => {
-    if (speed <= 0.25) return "Very Slow";
-    if (speed <= 0.5) return "Slow";
-    if (speed <= 0.75) return "Medium";
-    return "Normal";
+    if (speed <= 0.25) return "ULTRA SLOW";
+    if (speed <= 0.5) return "SLOW";
+    if (speed <= 0.75) return "MEDIUM";
+    return "FAST";
   };
 
   return (
-    <div className="p-4 bg-black/30 backdrop-blur-xl border-green-900/30 relative overflow-hidden shadow-[0_0_25px_rgba(0,200,0,0.2)]">
+    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-6 shadow-2xl border border-purple-500/20">
+      {/* Modern gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-transparent to-purple-500/10 pointer-events-none" />
+      
       <canvas
         ref={canvasRef}
-        className="w-full aspect-square rounded-lg bg-black/50 border border-green-900/30"
+        className="w-full aspect-square rounded-xl bg-black/80 border-2 border-purple-400/30 shadow-[0_0_50px_rgba(168,85,247,0.4)] backdrop-blur-sm"
       />
       
       {gameOver && playerMode && (
@@ -146,29 +159,34 @@ export function GameCanvas({
       )}
       
       {playerMode && !gameOver && (
-        <div className="absolute top-6 left-6 px-4 py-2 bg-black/70 backdrop-blur-md rounded-full flex items-center gap-2 border border-green-900/50">
-          <span className="text-white font-semibold">Score: {playerScore || 0}</span>
-          <div className="w-1 h-6 bg-neutral-600 rounded-full mx-1"></div>
+        <div className="absolute top-8 left-8 px-6 py-3 bg-gradient-to-r from-purple-600/90 to-cyan-600/90 backdrop-blur-xl rounded-2xl flex items-center gap-4 border border-white/20 shadow-lg">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse" />
+            <span className="text-white font-bold text-lg tracking-wide">SCORE: {playerScore || 0}</span>
+          </div>
+          
+          <div className="w-px h-8 bg-white/30" />
+          
           <span className={cn(
-            "text-sm px-2 py-0.5 rounded-md font-medium",
-            difficulty === 1 ? "bg-green-600/70 text-green-100" :
-            difficulty === 2 ? "bg-yellow-600/70 text-yellow-100" :
-            "bg-red-600/70 text-red-100"
+            "text-sm px-3 py-1.5 rounded-xl font-bold tracking-wider",
+            difficulty === 1 ? "bg-emerald-500/80 text-white shadow-[0_0_20px_rgba(16,185,129,0.5)]" :
+            difficulty === 2 ? "bg-amber-500/80 text-white shadow-[0_0_20px_rgba(245,158,11,0.5)]" :
+            "bg-red-500/80 text-white shadow-[0_0_20px_rgba(239,68,68,0.5)]"
           )}>
             {getDifficultyLabel(difficulty)}
           </span>
           
           {gameSpeed !== 0.5 && (
             <>
-              <div className="w-1 h-6 bg-neutral-600 rounded-full mx-1"></div>
+              <div className="w-px h-8 bg-white/30" />
               <span className={cn(
-                "text-sm px-2 py-0.5 rounded-md font-medium",
-                gameSpeed === 0.25 ? "bg-blue-600/70 text-blue-100" :
-                gameSpeed === 0.75 ? "bg-yellow-600/70 text-yellow-100" :
-                gameSpeed === 1 ? "bg-red-600/70 text-red-100" :
-                "bg-purple-600/70 text-purple-100"
+                "text-sm px-3 py-1.5 rounded-xl font-bold tracking-wider",
+                gameSpeed === 0.25 ? "bg-blue-500/80 text-white shadow-[0_0_20px_rgba(59,130,246,0.5)]" :
+                gameSpeed === 0.75 ? "bg-orange-500/80 text-white shadow-[0_0_20px_rgba(249,115,22,0.5)]" :
+                gameSpeed === 1 ? "bg-red-500/80 text-white shadow-[0_0_20px_rgba(239,68,68,0.5)]" :
+                "bg-purple-500/80 text-white shadow-[0_0_20px_rgba(168,85,247,0.5)]"
               )}>
-                {getSpeedLabel(gameSpeed)} Speed
+                {getSpeedLabel(gameSpeed)}
               </span>
             </>
           )}
@@ -176,28 +194,29 @@ export function GameCanvas({
       )}
       
       {playerMode && !gameOver && (
-        <div className="absolute top-6 right-6 flex flex-col gap-2 items-end">
+        <div className="absolute top-8 right-8 flex flex-col gap-3 items-end">
           {activePowerUps.length > 0 && (
-            <div className="flex gap-1 mb-2">
+            <div className="flex gap-2 mb-2">
               {activePowerUps.map((powerUp, index) => (
                 <Badge key={index} className={cn(
-                  "animate-pulse shadow-[0_0_10px_rgba(255,255,255,0.3)]",
-                  powerUp.effect === "speed" ? "bg-yellow-500" :
-                  powerUp.effect === "shield" ? "bg-blue-500" :
-                  powerUp.effect === "invisible" ? "bg-purple-500" :
-                  powerUp.effect === "magnet" ? "bg-pink-500" :
-                  "bg-purple-500"
+                  "px-4 py-2 text-xs font-bold tracking-wider rounded-xl border-2 animate-pulse shadow-lg",
+                  powerUp.effect === "speed" ? "bg-gradient-to-r from-yellow-400 to-orange-500 text-black border-yellow-300 shadow-[0_0_20px_rgba(251,191,36,0.6)]" :
+                  powerUp.effect === "shield" ? "bg-gradient-to-r from-blue-400 to-cyan-500 text-white border-blue-300 shadow-[0_0_20px_rgba(59,130,246,0.6)]" :
+                  powerUp.effect === "invisible" ? "bg-gradient-to-r from-purple-400 to-pink-500 text-white border-purple-300 shadow-[0_0_20px_rgba(168,85,247,0.6)]" :
+                  powerUp.effect === "magnet" ? "bg-gradient-to-r from-pink-400 to-rose-500 text-white border-pink-300 shadow-[0_0_20px_rgba(236,72,153,0.6)]" :
+                  "bg-gradient-to-r from-indigo-400 to-purple-500 text-white border-indigo-300 shadow-[0_0_20px_rgba(99,102,241,0.6)]"
                 )}>
                   {getPowerUpName(powerUp.effect)}
                 </Badge>
               ))}
             </div>
           )}
+          
           <button
             onClick={() => setShowSkinSelector(!showSkinSelector)}
-            className="px-3 py-2 bg-black/70 backdrop-blur-md rounded-lg text-sm text-white hover:bg-green-900/50 transition-colors border border-green-900/50"
+            className="px-6 py-3 bg-gradient-to-r from-purple-600/90 to-pink-600/90 backdrop-blur-xl rounded-xl text-sm text-white font-bold tracking-wide hover:from-purple-500/90 hover:to-pink-500/90 transition-all duration-300 border border-white/20 shadow-lg hover:shadow-[0_0_30px_rgba(168,85,247,0.5)] hover:scale-105"
           >
-            Change Skin
+            CHANGE SKIN
           </button>
           
           <SkinSelector 

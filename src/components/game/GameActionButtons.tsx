@@ -13,36 +13,36 @@ export function GameActionButtons({
   onTogglePerformanceOptions 
 }: GameActionButtonsProps) {
   return (
-    <div className="flex justify-center mb-8 gap-4">
+    <div className="flex justify-center mb-8 gap-6">
       <Link to="/brain-runner">
         <Button 
           variant="highlight"
-          size="lg"
-          className="flex items-center gap-2 animate-pulse"
+          size="xl"
+          className="flex items-center gap-3 animate-pulse font-bold tracking-wide text-lg px-8 py-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 shadow-[0_0_30px_rgba(16,185,129,0.6)] border-2 border-emerald-300/50 hover:scale-105 transition-all duration-300"
         >
-          <Brain className="animate-bounce" />
-          Play Brain Runner
+          <Brain className="animate-bounce w-6 h-6" />
+          PLAY BRAIN RUNNER
         </Button>
       </Link>
       
       <Button 
         onClick={onRestartGame}
         variant="restart"
-        size="lg"
-        className="flex items-center gap-2 shadow-[0_0_15px_rgba(0,130,255,0.6)]"
+        size="xl"
+        className="flex items-center gap-3 font-bold tracking-wide text-lg px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 shadow-[0_0_30px_rgba(59,130,246,0.6)] border-2 border-blue-400/50 hover:scale-105 transition-all duration-300"
       >
-        <RefreshCw className="animate-spin-slow" />
-        Restart Snake Game
+        <RefreshCw className="animate-spin-slow w-6 h-6" />
+        RESTART GAME
       </Button>
 
       <Button
         onClick={onTogglePerformanceOptions}
         variant="outline"
-        size="lg"
-        className="flex items-center gap-2"
+        size="xl"
+        className="flex items-center gap-3 font-bold tracking-wide text-lg px-8 py-4 bg-gradient-to-r from-slate-700 to-slate-800 hover:from-slate-600 hover:to-slate-700 text-white border-2 border-slate-500/50 shadow-lg hover:scale-105 transition-all duration-300"
       >
-        <Settings className="h-4 w-4" />
-        Performance
+        <Settings className="w-6 h-6" />
+        PERFORMANCE
       </Button>
     </div>
   );

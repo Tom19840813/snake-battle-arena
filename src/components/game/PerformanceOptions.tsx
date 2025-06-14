@@ -21,7 +21,7 @@ export function PerformanceOptions({
   const [quality, setQuality] = useState<'low' | 'medium' | 'high'>('medium');
   const [snakeCount, setSnakeCount] = useState(15);
   const [hideBackground, setHideBackground] = useState(false);
-  const [gameSpeed, setGameSpeed] = useState(0.5); // Changed default to 0.5 (slower)
+  const [gameSpeed, setGameSpeed] = useState(0.5);
 
   const handleQualityChange = (newQuality: 'low' | 'medium' | 'high') => {
     setQuality(newQuality);
@@ -45,61 +45,67 @@ export function PerformanceOptions({
     onGameSpeedChange(speed);
   };
 
-  // Helper function to get speed label
   const getSpeedLabel = (speed: number) => {
-    if (speed <= 0.25) return 'Very Slow';
-    if (speed <= 0.5) return 'Slow';
-    if (speed <= 0.75) return 'Medium';
-    return 'Normal';
+    if (speed <= 0.25) return 'ULTRA SLOW';
+    if (speed <= 0.5) return 'SLOW';
+    if (speed <= 0.75) return 'MEDIUM';
+    return 'FAST';
   };
 
   return (
-    <Card className="p-4 bg-black/30 backdrop-blur-xl border-green-900/30 shadow-[0_0_15px_rgba(0,200,0,0.1)]">
-      <h2 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-        <span className="text-green-400">⚙️</span>
-        Performance Settings
+    <Card className="p-6 bg-gradient-to-br from-slate-900/95 via-purple-900/95 to-slate-900/95 backdrop-blur-xl border-2 border-purple-500/30 shadow-2xl rounded-2xl">
+      <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/5 via-transparent to-purple-500/5 pointer-events-none rounded-2xl" />
+      
+      <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-3 tracking-wide">
+        <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-cyan-500 rounded-lg flex items-center justify-center">
+          <span className="text-white text-lg">⚡</span>
+        </div>
+        PERFORMANCE SETTINGS
       </h2>
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <p className="text-sm text-neutral-400">Graphics Quality</p>
-          <div className="flex items-center justify-between">
+      
+      <div className="space-y-6">
+        <div className="space-y-3">
+          <p className="text-sm font-semibold text-purple-200 tracking-wider uppercase">Graphics Quality</p>
+          <div className="flex items-center justify-between gap-3">
             <button
               onClick={() => handleQualityChange('low')}
-              className={`px-3 py-1 text-xs rounded-md ${
+              className={`flex-1 px-4 py-2.5 text-sm font-bold rounded-xl transition-all duration-300 tracking-wide ${
                 quality === 'low' 
-                  ? 'bg-green-700 text-white' 
-                  : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'
+                  ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.5)] scale-105' 
+                  : 'bg-slate-800/50 text-slate-400 hover:bg-slate-700/50 hover:text-white border border-slate-600/30'
               }`}
             >
-              Low
+              LOW
             </button>
             <button
               onClick={() => handleQualityChange('medium')}
-              className={`px-3 py-1 text-xs rounded-md ${
+              className={`flex-1 px-4 py-2.5 text-sm font-bold rounded-xl transition-all duration-300 tracking-wide ${
                 quality === 'medium' 
-                  ? 'bg-green-700 text-white' 
-                  : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'
+                  ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-[0_0_20px_rgba(245,158,11,0.5)] scale-105' 
+                  : 'bg-slate-800/50 text-slate-400 hover:bg-slate-700/50 hover:text-white border border-slate-600/30'
               }`}
             >
-              Medium
+              MEDIUM
             </button>
             <button
               onClick={() => handleQualityChange('high')}
-              className={`px-3 py-1 text-xs rounded-md ${
+              className={`flex-1 px-4 py-2.5 text-sm font-bold rounded-xl transition-all duration-300 tracking-wide ${
                 quality === 'high' 
-                  ? 'bg-green-700 text-white' 
-                  : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'
+                  ? 'bg-gradient-to-r from-red-500 to-pink-500 text-white shadow-[0_0_20px_rgba(239,68,68,0.5)] scale-105' 
+                  : 'bg-slate-800/50 text-slate-400 hover:bg-slate-700/50 hover:text-white border border-slate-600/30'
               }`}
             >
-              High
+              HIGH
             </button>
           </div>
         </div>
 
-        <div className="space-y-2">
-          <div className="flex justify-between">
-            <p className="text-sm text-neutral-400">Number of Snakes</p>
-            <span className="text-sm text-white">{snakeCount}</span>
+        <div className="space-y-3">
+          <div className="flex justify-between items-center">
+            <p className="text-sm font-semibold text-purple-200 tracking-wider uppercase">Snake Count</p>
+            <span className="text-lg font-bold text-white bg-purple-600/30 px-3 py-1 rounded-lg border border-purple-400/30">
+              {snakeCount}
+            </span>
           </div>
           <Slider
             defaultValue={[15]}
@@ -108,36 +114,37 @@ export function PerformanceOptions({
             step={5}
             value={[snakeCount]}
             onValueChange={handleSnakeCountChange}
-            className="w-full"
+            className="w-full [&_[role=slider]]:bg-gradient-to-r [&_[role=slider]]:from-purple-500 [&_[role=slider]]:to-cyan-500 [&_[role=slider]]:border-0 [&_[role=slider]]:shadow-[0_0_10px_rgba(168,85,247,0.5)]"
           />
         </div>
 
-        <div className="flex items-center space-x-2 py-2">
+        <div className="flex items-center space-x-4 py-3 px-4 bg-slate-800/30 rounded-xl border border-slate-600/30">
           <Switch
             id="hide-background"
             checked={hideBackground}
             onCheckedChange={handleHideBackgroundChange}
+            className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-purple-500 data-[state=checked]:to-cyan-500"
           />
-          <Label htmlFor="hide-background" className="text-neutral-300 text-sm">
+          <Label htmlFor="hide-background" className="text-white font-medium tracking-wide">
             Hide 3D Background for Better Performance
           </Label>
         </div>
 
-        <div className="space-y-2">
-          <div className="flex justify-between">
-            <p className="text-sm text-neutral-400">Game Speed</p>
-            <span className="text-sm text-white">
+        <div className="space-y-3">
+          <div className="flex justify-between items-center">
+            <p className="text-sm font-semibold text-purple-200 tracking-wider uppercase">Game Speed</p>
+            <span className="text-sm font-bold text-white bg-gradient-to-r from-purple-600/50 to-cyan-600/50 px-3 py-1.5 rounded-lg border border-purple-400/30 tracking-wide">
               {getSpeedLabel(gameSpeed)}
             </span>
           </div>
           <Slider
-            defaultValue={[0.5]} // Changed default to 0.5
-            max={1}              // Reduced max from 2 to 1
-            min={0.25}           // Reduced min from 0.5 to 0.25
-            step={0.25}          // Changed step to 0.25 for more granular control
+            defaultValue={[0.5]}
+            max={1}
+            min={0.25}
+            step={0.25}
             value={[gameSpeed]}
             onValueChange={handleGameSpeedChange}
-            className="w-full"
+            className="w-full [&_[role=slider]]:bg-gradient-to-r [&_[role=slider]]:from-purple-500 [&_[role=slider]]:to-cyan-500 [&_[role=slider]]:border-0 [&_[role=slider]]:shadow-[0_0_10px_rgba(168,85,247,0.5)]"
           />
         </div>
       </div>
