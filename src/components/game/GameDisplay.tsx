@@ -1,6 +1,6 @@
 
 import { useEffect, useRef } from 'react';
-import { GameBoard } from '../../game/GameBoard';
+import { BrainRunner } from '../../game/BrainRunner';
 
 interface GameDisplayProps {
   playerMode: boolean;
@@ -10,7 +10,7 @@ interface GameDisplayProps {
   activeSkin: string;
   onStatsUpdate: (stats: any) => void;
   gameSpeed?: number;
-  onGameBoardReady: (gameBoard: GameBoard | null) => void;
+  onGameBoardReady: (gameBoard: any) => void;
 }
 
 export function GameDisplay({
@@ -24,62 +24,74 @@ export function GameDisplay({
   onGameBoardReady
 }: GameDisplayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const gameRef = useRef<GameBoard | null>(null);
-  const prevGameSpeedRef = useRef<number>(gameSpeed);
+  const gameRef = useRef<BrainRunner | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!canvasRef.current) return;
+    if (!canvasRef.current || !containerRef.current) return;
 
     const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    const container = containerRef.current;
 
+    // Set fixed canvas size to prevent resizing issues
     const updateCanvasSize = () => {
-      const maxSize = Math.min(800, window.innerWidth - 40);
-      const size = Math.min(window.innerWidth - 40, maxSize);
-      canvas.width = size;
-      canvas.height = size;
+      const containerWidth = container.clientWidth;
+      const containerHeight = container.clientHeight;
+      const size = Math.min(containerWidth, containerHeight, 600);
+      
+      // Only update if size actually changed to prevent flickering
+      if (canvas.width !== size || canvas.height !== size) {
+        canvas.width = size;
+        canvas.height = size;
+        canvas.style.width = `${size}px`;
+        canvas.style.height = `${size}px`;
+      }
     };
 
     updateCanvasSize();
-    window.addEventListener('resize', updateCanvasSize);
 
+    // Clean up previous game instance
     if (gameRef.current) {
       gameRef.current.stop();
       gameRef.current = null;
     }
 
-    gameRef.current = new GameBoard(ctx, aiOpponentCount, playerMode, difficulty);
-    gameRef.current.onStatsUpdate = onStatsUpdate;
-    
-    if (activeSkin && gameRef.current) {
-      gameRef.current.setPlayerSkin(activeSkin);
+    try {
+      // Initialize new game instance
+      gameRef.current = new BrainRunner(canvas);
+      
+      // Draw initial screen immediately to prevent blank canvas
+      gameRef.current.drawInitialScreen();
+      
+      onGameBoardReady(gameRef.current);
+    } catch (error) {
+      console.error('Failed to initialize BrainRunner:', error);
     }
-    
-    if (gameRef.current && gameSpeed !== prevGameSpeedRef.current) {
-      gameRef.current.setGameSpeed(gameSpeed);
-      prevGameSpeedRef.current = gameSpeed;
-    }
-    
-    gameRef.current.start();
-    onGameBoardReady(gameRef.current);
+
+    // Handle resize with debouncing to prevent excessive updates
+    let resizeTimeout: NodeJS.Timeout;
+    const handleResize = () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        updateCanvasSize();
+        if (gameRef.current) {
+          gameRef.current.resize();
+        }
+      }, 100);
+    };
+
+    window.addEventListener('resize', handleResize);
 
     return () => {
-      window.removeEventListener('resize', updateCanvasSize);
+      window.removeEventListener('resize', handleResize);
+      clearTimeout(resizeTimeout);
       if (gameRef.current) {
         gameRef.current.stop();
         gameRef.current = null;
       }
       onGameBoardReady(null);
     };
-  }, [aiOpponentCount, playerMode, difficulty, onStatsUpdate, activeSkin, onGameBoardReady]);
-
-  useEffect(() => {
-    if (gameRef.current && gameSpeed !== prevGameSpeedRef.current) {
-      gameRef.current.setGameSpeed(gameSpeed);
-      prevGameSpeedRef.current = gameSpeed;
-    }
-  }, [gameSpeed]);
+  }, [onGameBoardReady]);
 
   useEffect(() => {
     if (gameOver && gameRef.current) {
@@ -88,9 +100,15 @@ export function GameDisplay({
   }, [gameOver]);
 
   return (
-    <canvas
-      ref={canvasRef}
-      className="w-full aspect-square rounded-xl bg-black/80 border-2 border-purple-400/30 shadow-[0_0_50px_rgba(168,85,247,0.4)] backdrop-blur-sm"
-    />
+    <div 
+      ref={containerRef}
+      className="w-full aspect-square max-w-[600px] mx-auto"
+    >
+      <canvas
+        ref={canvasRef}
+        className="w-full h-full rounded-xl bg-black/80 border-2 border-purple-400/30 shadow-[0_0_50px_rgba(168,85,247,0.4)] backdrop-blur-sm"
+        style={{ imageRendering: 'pixelated' }}
+      />
+    </div>
   );
 }

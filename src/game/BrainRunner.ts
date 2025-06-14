@@ -20,16 +20,20 @@ export class BrainRunner {
   private animationFrame: number | null = null;
   private lastFrameTime: number = 0;
   private groundY: number;
-  private groundSpeed: number = 1.5; // Further reduced from 3 to 1.5 (50% reduction)
+  private groundSpeed: number = 1.5;
   private groundPos: number = 0;
   private factDisplayed: boolean = false;
-  private maxSpeed: number = 4.5; // Add a cap to maximum speed
+  private maxSpeed: number = 4.5;
+  private isInitialized: boolean = false;
   
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('Failed to get 2D context');
     this.ctx = ctx;
+    
+    // Prevent canvas scaling issues
+    this.ctx.imageSmoothingEnabled = false;
     
     this.groundY = this.canvas.height * 0.75;
     
@@ -38,7 +42,7 @@ export class BrainRunner {
       isRunning: false,
       score: 0,
       distance: 0,
-      speed: 1.5, // Reduced initial speed from 2.75 to 1.5 (45% reduction)
+      speed: 1.5,
       facts: [],
       currentFact: null
     };
@@ -78,6 +82,8 @@ export class BrainRunner {
     
     // Set up event listeners
     this.setupEventListeners();
+    
+    this.isInitialized = true;
   }
   
   private loadAssets(): void {
@@ -175,7 +181,7 @@ export class BrainRunner {
       
       if (!this.character.isJumping) {
         this.character.isJumping = true;
-        this.character.velocityY = -12; // Reduced jump velocity from -15 to -12
+        this.character.velocityY = -12;
         if (this.assets.sounds.jump) {
           this.assets.sounds.jump.play().catch(err => console.error('Audio playback error:', err));
         }
@@ -186,6 +192,7 @@ export class BrainRunner {
     
     document.addEventListener('keydown', (e) => {
       if (e.code === 'Space') {
+        e.preventDefault();
         handleJump();
       }
     });
@@ -203,7 +210,7 @@ export class BrainRunner {
     this.gameState.isRunning = true;
     this.gameState.score = 0;
     this.gameState.distance = 0;
-    this.gameState.speed = 1.5; // Reduced initial speed from 2.75 to 1.5
+    this.gameState.speed = 1.5;
     
     // Reset character position
     this.groundY = this.canvas.height * 0.75;
@@ -213,13 +220,12 @@ export class BrainRunner {
     this.obstacles = [];
     this.collectibles = [];
     
-    // Add the daily fact collectible
     if (this.gameState.currentFact && !this.factDisplayed) {
       this.spawnCollectible(this.gameState.currentFact);
       this.factDisplayed = true;
     }
     
-    // Start the game loop
+    // Start the game loop with proper timing
     this.lastFrameTime = performance.now();
     this.gameLoop(this.lastFrameTime);
   }
@@ -235,16 +241,13 @@ export class BrainRunner {
   private gameLoop(timestamp: number): void {
     if (!this.gameState.isRunning) return;
     
-    const deltaTime = timestamp - this.lastFrameTime;
+    const deltaTime = Math.min(timestamp - this.lastFrameTime, 50) / 1000; // Cap at 50ms to prevent jumps
     this.lastFrameTime = timestamp;
     
-    // Limit delta time to prevent large jumps after tab switch or lag
-    const limitedDeltaTime = Math.min(deltaTime, 100) / 1000; // Convert to seconds and cap at 100ms
+    // Update game state
+    this.update(deltaTime);
     
-    // Update
-    this.update(limitedDeltaTime);
-    
-    // Render
+    // Render the game
     this.render();
     
     // Continue the loop
@@ -433,40 +436,38 @@ export class BrainRunner {
   }
   
   private render(): void {
-    // Clear canvas
-    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    // Store current transform
+    this.ctx.save();
     
-    // Draw background
-    if (this.assets.background) {
-      this.ctx.drawImage(this.assets.background, 0, 0, this.canvas.width, this.canvas.height);
-    } else {
-      // Enhanced fallback background
-      const gradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
-      gradient.addColorStop(0, '#87CEEB');
-      gradient.addColorStop(0.7, '#98FB98');
-      gradient.addColorStop(1, '#90EE90');
-      this.ctx.fillStyle = gradient;
-      this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-      
-      // Draw moving clouds
+    // Clear canvas with a solid background to prevent flickering
+    this.ctx.fillStyle = '#87CEEB';
+    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    
+    // Draw sky gradient
+    const gradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
+    gradient.addColorStop(0, '#87CEEB');
+    gradient.addColorStop(0.7, '#98FB98');
+    gradient.addColorStop(1, '#90EE90');
+    this.ctx.fillStyle = gradient;
+    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    
+    // Draw moving clouds (only if game is running to prevent constant movement)
+    if (this.gameState.isRunning) {
       this.drawMovingClouds();
+    } else {
+      this.drawClouds();
     }
     
     // Draw ground
-    if (this.assets.ground) {
-      for (let i = -this.groundPos; i < this.canvas.width; i += this.assets.ground.width) {
-        this.ctx.drawImage(this.assets.ground, i, this.groundY, this.assets.ground.width, this.canvas.height - this.groundY);
-      }
-    } else {
-      // Enhanced fallback ground
-      this.ctx.fillStyle = '#8B4513';
-      this.ctx.fillRect(0, this.groundY, this.canvas.width, this.canvas.height - this.groundY);
-      
-      // Draw grass
-      this.ctx.fillStyle = '#228B22';
-      this.ctx.fillRect(0, this.groundY, this.canvas.width, 10);
-      
-      // Draw ground pattern
+    this.ctx.fillStyle = '#8B4513';
+    this.ctx.fillRect(0, this.groundY, this.canvas.width, this.canvas.height - this.groundY);
+    
+    // Draw grass
+    this.ctx.fillStyle = '#228B22';
+    this.ctx.fillRect(0, this.groundY, this.canvas.width, 10);
+    
+    // Draw ground pattern only if game is running
+    if (this.gameState.isRunning) {
       this.ctx.fillStyle = '#654321';
       for (let i = 0; i < this.canvas.width; i += 20) {
         this.ctx.fillRect(i - this.groundPos % 20, this.groundY + 15, 3, 10);
@@ -541,7 +542,16 @@ export class BrainRunner {
     // Draw character
     this.drawCharacter();
     
-    // Draw score and stats
+    // Draw UI only if game is running
+    if (this.gameState.isRunning) {
+      this.drawUI();
+    }
+    
+    // Restore transform
+    this.ctx.restore();
+  }
+  
+  private drawUI(): void {
     this.ctx.fillStyle = 'white';
     this.ctx.strokeStyle = 'black';
     this.ctx.lineWidth = 1;
@@ -556,7 +566,6 @@ export class BrainRunner {
     this.ctx.strokeText(distanceText, 20, 60);
     this.ctx.fillText(distanceText, 20, 60);
     
-    // Draw streak if exists
     if (this.playerStats.streak > 1) {
       const streakText = `Streak: ${this.playerStats.streak} days`;
       this.ctx.strokeText(streakText, 20, 90);
@@ -565,10 +574,16 @@ export class BrainRunner {
   }
   
   public drawInitialScreen(): void {
-    // Clear canvas
-    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    if (!this.isInitialized) return;
     
-    // Draw sky background
+    // Store current transform
+    this.ctx.save();
+    
+    // Clear canvas completely
+    this.ctx.fillStyle = '#87CEEB';
+    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    
+    // Draw sky gradient
     const gradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
     gradient.addColorStop(0, '#87CEEB');
     gradient.addColorStop(1, '#98FB98');
@@ -583,10 +598,10 @@ export class BrainRunner {
     this.ctx.fillStyle = '#228B22';
     this.ctx.fillRect(0, this.groundY, this.canvas.width, 10);
     
-    // Draw character (brain) at starting position
+    // Draw character at starting position
     this.drawCharacter();
     
-    // Draw clouds
+    // Draw static clouds
     this.drawClouds();
     
     // Draw welcome text
@@ -598,6 +613,9 @@ export class BrainRunner {
     const welcomeText = 'Click to Start Your Brain Adventure!';
     this.ctx.strokeText(welcomeText, this.canvas.width / 2, 50);
     this.ctx.fillText(welcomeText, this.canvas.width / 2, 50);
+    
+    // Restore transform
+    this.ctx.restore();
   }
   
   private drawClouds(): void {
@@ -701,17 +719,17 @@ export class BrainRunner {
   }
   
   public resize(): void {
-    // Update canvas size and reposition elements
-    const container = this.canvas.parentElement;
-    if (container) {
-      this.canvas.width = container.clientWidth;
-      this.canvas.height = container.clientHeight;
-      
-      // Update groundY based on new canvas height
-      this.groundY = this.canvas.height * 0.75;
-      
-      // Reposition character
+    // Update groundY based on new canvas height
+    this.groundY = this.canvas.height * 0.75;
+    
+    // Reposition character if not jumping
+    if (!this.character.isJumping) {
       this.character.y = this.groundY - this.character.height;
+    }
+    
+    // Redraw the current state
+    if (!this.gameState.isRunning) {
+      this.drawInitialScreen();
     }
   }
   
