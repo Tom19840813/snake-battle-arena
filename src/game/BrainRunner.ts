@@ -1,4 +1,3 @@
-
 import { 
   GameState, 
   Character, 
@@ -205,6 +204,14 @@ export class BrainRunner {
     this.gameState.score = 0;
     this.gameState.distance = 0;
     this.gameState.speed = 1.5; // Reduced initial speed from 2.75 to 1.5
+    
+    // Reset character position
+    this.groundY = this.canvas.height * 0.75;
+    this.character.y = this.groundY - this.character.height;
+    
+    // Clear obstacles and collectibles
+    this.obstacles = [];
+    this.collectibles = [];
     
     // Add the daily fact collectible
     if (this.gameState.currentFact && !this.factDisplayed) {
@@ -433,21 +440,37 @@ export class BrainRunner {
     if (this.assets.background) {
       this.ctx.drawImage(this.assets.background, 0, 0, this.canvas.width, this.canvas.height);
     } else {
-      // Fallback background
-      this.ctx.fillStyle = '#87CEEB';
+      // Enhanced fallback background
+      const gradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
+      gradient.addColorStop(0, '#87CEEB');
+      gradient.addColorStop(0.7, '#98FB98');
+      gradient.addColorStop(1, '#90EE90');
+      this.ctx.fillStyle = gradient;
       this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+      
+      // Draw moving clouds
+      this.drawMovingClouds();
     }
     
     // Draw ground
     if (this.assets.ground) {
-      // Draw ground as a repeating pattern
       for (let i = -this.groundPos; i < this.canvas.width; i += this.assets.ground.width) {
         this.ctx.drawImage(this.assets.ground, i, this.groundY, this.assets.ground.width, this.canvas.height - this.groundY);
       }
     } else {
-      // Fallback ground
+      // Enhanced fallback ground
       this.ctx.fillStyle = '#8B4513';
       this.ctx.fillRect(0, this.groundY, this.canvas.width, this.canvas.height - this.groundY);
+      
+      // Draw grass
+      this.ctx.fillStyle = '#228B22';
+      this.ctx.fillRect(0, this.groundY, this.canvas.width, 10);
+      
+      // Draw ground pattern
+      this.ctx.fillStyle = '#654321';
+      for (let i = 0; i < this.canvas.width; i += 20) {
+        this.ctx.fillRect(i - this.groundPos % 20, this.groundY + 15, 3, 10);
+      }
     }
     
     // Draw collectibles
@@ -516,35 +539,165 @@ export class BrainRunner {
     }
     
     // Draw character
+    this.drawCharacter();
+    
+    // Draw score and stats
+    this.ctx.fillStyle = 'white';
+    this.ctx.strokeStyle = 'black';
+    this.ctx.lineWidth = 1;
+    this.ctx.font = 'bold 20px Arial';
+    this.ctx.textAlign = 'left';
+    
+    const scoreText = `Score: ${this.gameState.score}`;
+    this.ctx.strokeText(scoreText, 20, 30);
+    this.ctx.fillText(scoreText, 20, 30);
+    
+    const distanceText = `Distance: ${Math.floor(this.gameState.distance)}m`;
+    this.ctx.strokeText(distanceText, 20, 60);
+    this.ctx.fillText(distanceText, 20, 60);
+    
+    // Draw streak if exists
+    if (this.playerStats.streak > 1) {
+      const streakText = `Streak: ${this.playerStats.streak} days`;
+      this.ctx.strokeText(streakText, 20, 90);
+      this.ctx.fillText(streakText, 20, 90);
+    }
+  }
+  
+  public drawInitialScreen(): void {
+    // Clear canvas
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    
+    // Draw sky background
+    const gradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
+    gradient.addColorStop(0, '#87CEEB');
+    gradient.addColorStop(1, '#98FB98');
+    this.ctx.fillStyle = gradient;
+    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    
+    // Draw ground
+    this.ctx.fillStyle = '#8B4513';
+    this.ctx.fillRect(0, this.groundY, this.canvas.width, this.canvas.height - this.groundY);
+    
+    // Draw grass on ground
+    this.ctx.fillStyle = '#228B22';
+    this.ctx.fillRect(0, this.groundY, this.canvas.width, 10);
+    
+    // Draw character (brain) at starting position
+    this.drawCharacter();
+    
+    // Draw clouds
+    this.drawClouds();
+    
+    // Draw welcome text
+    this.ctx.fillStyle = 'white';
+    this.ctx.strokeStyle = 'black';
+    this.ctx.lineWidth = 2;
+    this.ctx.font = 'bold 24px Arial';
+    this.ctx.textAlign = 'center';
+    const welcomeText = 'Click to Start Your Brain Adventure!';
+    this.ctx.strokeText(welcomeText, this.canvas.width / 2, 50);
+    this.ctx.fillText(welcomeText, this.canvas.width / 2, 50);
+  }
+  
+  private drawClouds(): void {
+    this.ctx.fillStyle = 'white';
+    
+    // Draw several clouds
+    const clouds = [
+      { x: this.canvas.width * 0.1, y: 50, size: 30 },
+      { x: this.canvas.width * 0.3, y: 80, size: 25 },
+      { x: this.canvas.width * 0.6, y: 60, size: 35 },
+      { x: this.canvas.width * 0.8, y: 90, size: 28 }
+    ];
+    
+    clouds.forEach(cloud => {
+      // Draw cloud as overlapping circles
+      this.ctx.beginPath();
+      this.ctx.arc(cloud.x, cloud.y, cloud.size, 0, Math.PI * 2);
+      this.ctx.arc(cloud.x - cloud.size * 0.5, cloud.y, cloud.size * 0.8, 0, Math.PI * 2);
+      this.ctx.arc(cloud.x + cloud.size * 0.5, cloud.y, cloud.size * 0.8, 0, Math.PI * 2);
+      this.ctx.fill();
+    });
+  }
+  
+  private drawCharacter(): void {
     if (this.assets.character) {
       this.ctx.drawImage(
         this.assets.character,
-        this.character.frame * this.character.width,
-        0,
-        this.character.width,
-        this.character.height,
         this.character.x,
         this.character.y,
         this.character.width,
         this.character.height
       );
     } else {
-      // Fallback character
-      this.ctx.fillStyle = '#FF69B4';
-      this.ctx.fillRect(this.character.x, this.character.y, this.character.width, this.character.height);
+      // Enhanced fallback character (brain)
+      const centerX = this.character.x + this.character.width / 2;
+      const centerY = this.character.y + this.character.height / 2;
+      
+      // Draw brain body
+      this.ctx.fillStyle = '#FFB6C1';
+      this.ctx.strokeStyle = '#FF69B4';
+      this.ctx.lineWidth = 3;
+      this.ctx.beginPath();
+      this.ctx.ellipse(centerX, centerY, 25, 20, 0, 0, Math.PI * 2);
+      this.ctx.fill();
+      this.ctx.stroke();
+      
+      // Draw brain wrinkles
+      this.ctx.strokeStyle = '#FF1493';
+      this.ctx.lineWidth = 2;
+      this.ctx.beginPath();
+      this.ctx.arc(centerX - 8, centerY - 5, 8, 0, Math.PI);
+      this.ctx.arc(centerX + 8, centerY - 5, 8, 0, Math.PI);
+      this.ctx.arc(centerX, centerY + 3, 10, 0, Math.PI);
+      this.ctx.stroke();
+      
+      // Draw eyes
+      this.ctx.fillStyle = 'white';
+      this.ctx.beginPath();
+      this.ctx.arc(centerX - 8, centerY - 8, 4, 0, Math.PI * 2);
+      this.ctx.arc(centerX + 8, centerY - 8, 4, 0, Math.PI * 2);
+      this.ctx.fill();
+      
+      // Draw pupils
+      this.ctx.fillStyle = 'black';
+      this.ctx.beginPath();
+      this.ctx.arc(centerX - 8, centerY - 8, 2, 0, Math.PI * 2);
+      this.ctx.arc(centerX + 8, centerY - 8, 2, 0, Math.PI * 2);
+      this.ctx.fill();
+      
+      // Draw smile
+      this.ctx.strokeStyle = '#FF1493';
+      this.ctx.lineWidth = 2;
+      this.ctx.beginPath();
+      this.ctx.arc(centerX, centerY + 2, 8, 0, Math.PI);
+      this.ctx.stroke();
     }
+  }
+  
+  private drawMovingClouds(): void {
+    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
     
-    // Draw score
-    this.ctx.fillStyle = 'black';
-    this.ctx.font = '20px Arial';
-    this.ctx.textAlign = 'left';
-    this.ctx.fillText(`Score: ${this.gameState.score}`, 20, 30);
-    this.ctx.fillText(`Distance: ${Math.floor(this.gameState.distance)}m`, 20, 60);
+    // Moving clouds based on game distance
+    const cloudOffset = (this.gameState.distance * 0.1) % (this.canvas.width + 200);
     
-    // Draw streak if exists
-    if (this.playerStats.streak > 1) {
-      this.ctx.fillText(`Streak: ${this.playerStats.streak} days`, 20, 90);
-    }
+    const clouds = [
+      { x: this.canvas.width * 0.1 - cloudOffset, y: 50, size: 30 },
+      { x: this.canvas.width * 0.4 - cloudOffset * 0.7, y: 80, size: 25 },
+      { x: this.canvas.width * 0.7 - cloudOffset * 1.2, y: 60, size: 35 },
+      { x: this.canvas.width * 1.1 - cloudOffset, y: 90, size: 28 }
+    ];
+    
+    clouds.forEach(cloud => {
+      if (cloud.x > -100 && cloud.x < this.canvas.width + 100) {
+        this.ctx.beginPath();
+        this.ctx.arc(cloud.x, cloud.y, cloud.size, 0, Math.PI * 2);
+        this.ctx.arc(cloud.x - cloud.size * 0.5, cloud.y, cloud.size * 0.8, 0, Math.PI * 2);
+        this.ctx.arc(cloud.x + cloud.size * 0.5, cloud.y, cloud.size * 0.8, 0, Math.PI * 2);
+        this.ctx.fill();
+      }
+    });
   }
   
   public resize(): void {
