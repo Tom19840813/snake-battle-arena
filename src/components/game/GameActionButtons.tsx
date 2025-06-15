@@ -1,7 +1,6 @@
 
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Brain, Settings } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { RefreshCw, Settings } from 'lucide-react';
 
 interface GameActionButtonsProps {
   onRestartGame: () => void;
@@ -14,17 +13,6 @@ export function GameActionButtons({
 }: GameActionButtonsProps) {
   return (
     <div className="flex justify-center mb-8 gap-6">
-      <Link to="/brain-runner">
-        <Button 
-          variant="highlight"
-          size="xl"
-          className="flex items-center gap-3 animate-pulse font-bold tracking-wide text-lg px-8 py-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 shadow-[0_0_30px_rgba(16,185,129,0.6)] border-2 border-emerald-300/50 hover:scale-105 transition-all duration-300"
-        >
-          <Brain className="animate-bounce w-6 h-6" />
-          PLAY BRAIN RUNNER
-        </Button>
-      </Link>
-      
       <Button 
         onClick={onRestartGame}
         variant="restart"

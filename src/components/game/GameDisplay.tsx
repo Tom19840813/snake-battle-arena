@@ -1,6 +1,6 @@
 
 import { useEffect, useRef } from 'react';
-import { BrainRunner } from '../../game/BrainRunner';
+import { GameBoard } from '../../game/GameBoard';
 
 interface GameDisplayProps {
   playerMode: boolean;
@@ -24,7 +24,7 @@ export function GameDisplay({
   onGameBoardReady
 }: GameDisplayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const gameRef = useRef<BrainRunner | null>(null);
+  const gameRef = useRef<GameBoard | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -33,19 +33,16 @@ export function GameDisplay({
     const canvas = canvasRef.current;
     const container = containerRef.current;
 
-    // Set fixed canvas size to prevent resizing issues
+    // Set canvas size
     const updateCanvasSize = () => {
       const containerWidth = container.clientWidth;
       const containerHeight = container.clientHeight;
       const size = Math.min(containerWidth, containerHeight, 600);
       
-      // Only update if size actually changed to prevent flickering
-      if (canvas.width !== size || canvas.height !== size) {
-        canvas.width = size;
-        canvas.height = size;
-        canvas.style.width = `${size}px`;
-        canvas.style.height = `${size}px`;
-      }
+      canvas.width = size;
+      canvas.height = size;
+      canvas.style.width = `${size}px`;
+      canvas.style.height = `${size}px`;
     };
 
     updateCanvasSize();
@@ -58,40 +55,40 @@ export function GameDisplay({
 
     try {
       // Initialize new game instance
-      gameRef.current = new BrainRunner(canvas);
-      
-      // Draw initial screen immediately to prevent blank canvas
-      gameRef.current.drawInitialScreen();
+      gameRef.current = new GameBoard(
+        canvas,
+        playerMode,
+        aiOpponentCount,
+        difficulty,
+        activeSkin,
+        onStatsUpdate,
+        gameSpeed
+      );
       
       onGameBoardReady(gameRef.current);
     } catch (error) {
-      console.error('Failed to initialize BrainRunner:', error);
+      console.error('Failed to initialize GameBoard:', error);
     }
 
-    // Handle resize with debouncing to prevent excessive updates
-    let resizeTimeout: NodeJS.Timeout;
+    // Handle resize
     const handleResize = () => {
-      clearTimeout(resizeTimeout);
-      resizeTimeout = setTimeout(() => {
-        updateCanvasSize();
-        if (gameRef.current) {
-          gameRef.current.resize();
-        }
-      }, 100);
+      updateCanvasSize();
+      if (gameRef.current) {
+        gameRef.current.resize();
+      }
     };
 
     window.addEventListener('resize', handleResize);
 
     return () => {
       window.removeEventListener('resize', handleResize);
-      clearTimeout(resizeTimeout);
       if (gameRef.current) {
         gameRef.current.stop();
         gameRef.current = null;
       }
       onGameBoardReady(null);
     };
-  }, [onGameBoardReady]);
+  }, [playerMode, aiOpponentCount, difficulty, activeSkin, gameSpeed, onStatsUpdate, onGameBoardReady]);
 
   useEffect(() => {
     if (gameOver && gameRef.current) {
