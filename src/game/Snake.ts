@@ -143,13 +143,15 @@ export class Snake {
   move(food: Position[]): boolean {
     if (!this.isAlive) return false;
     
+    console.log(`Snake move called - body length: ${this.body.length}, direction: ${this.direction.x},${this.direction.y}`);
+    
     // Update power-ups
     this.updatePowerUps();
     
     // Calculate movement speed based on power-ups
     const speed = this.hasPowerUp("speed") ? 2 : 1;
     
-    let eating = false;
+    let hasEatenFood = false;
     
     // For speed powerup, we move multiple steps per tick
     for (let i = 0; i < speed; i++) {
@@ -158,26 +160,43 @@ export class Snake {
         y: this.body[0].y + this.direction.y
       };
       
+      console.log(`New head position: ${newHead.x},${newHead.y}`);
+      
       // Food magnet power-up: attract nearby food
       if (this.hasPowerUp("magnet")) {
         magnetizeFoodTowards(this.body[0], food, this.magnetRange);
       }
 
-      // Check if eating food
+      // Check if eating food BEFORE any body manipulation
       const foodIndex = food.findIndex(f => f.x === newHead.x && f.y === newHead.y);
-      const currentEating = foodIndex !== -1;
+      const isEatingFood = foodIndex !== -1;
+      
+      console.log(`Food check - eating: ${isEatingFood}, food index: ${foodIndex}`);
 
-      if (currentEating) {
+      if (isEatingFood) {
+        console.log(`Snake eating food! Score before: ${this.score}`);
         this.score += 10;
-        eating = true;
-      } else if (i === 0) { // Only remove tail on first step if not eating
-        this.body.pop();
+        hasEatenFood = true;
+        console.log(`Score after eating: ${this.score}`);
       }
 
+      // Add new head first
       this.body.unshift(newHead);
+      console.log(`Body length after adding head: ${this.body.length}`);
+      
+      // Only remove tail if NOT eating food
+      if (!isEatingFood) {
+        this.body.pop();
+        console.log(`Removed tail - body length now: ${this.body.length}`);
+      } else {
+        console.log(`Did not remove tail because we ate food - body length: ${this.body.length}`);
+      }
       
       // Only continue multi-step movement if not eating
-      if (currentEating) break;
+      if (isEatingFood) {
+        console.log("Breaking movement loop because we ate food");
+        break;
+      }
     }
     
     // Update split snake if it exists
@@ -193,6 +212,7 @@ export class Snake {
       }
     }
     
-    return eating;
+    console.log(`Move completed - ate food: ${hasEatenFood}, final body length: ${this.body.length}`);
+    return hasEatenFood;
   }
 }
