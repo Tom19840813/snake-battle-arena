@@ -17,7 +17,7 @@ export class GameBoard {
   private lastFrameTime: number = 0;
   private targetFPS: number = 60;
   private frameInterval: number = 1000 / 60;
-  private gameUpdateInterval: number = 100;
+  private gameUpdateInterval: number = 50; // Reduced from 100ms to 50ms for smoother updates
   private timeSinceLastUpdate: number = 0;
   private playerSnake: Snake | null = null;
   private isPlayerMode: boolean = false;
@@ -25,6 +25,10 @@ export class GameBoard {
   private playerSkin: string = "default";
   private totalOpponents: number = 20;
   private isRunning: boolean = false;
+  
+  // Interpolation properties
+  private lastGameState: { snakes: any[], food: Position[] } | null = null;
+  private interpolationFactor: number = 0;
   
   // Manager instances
   private statsManager: GameStatsManager;
@@ -189,12 +193,43 @@ export class GameBoard {
     return this.playerSnake !== null && this.playerSnake.isAlive;
   }
 
-  private update(deltaTime: number)  {
+  private captureGameState() {
+    return {
+      snakes: this.snakes.map(snake => ({
+        body: [...snake.body],
+        isAlive: snake.isAlive,
+        color: snake.color,
+        isPlayer: snake.isPlayer,
+        activePattern: snake.activePattern,
+        glowEffect: snake.glowEffect,
+        activePowerUps: [...snake.activePowerUps]
+      })),
+      food: [...this.food]
+    };
+  }
+
+  private interpolatePosition(from: Position, to: Position, factor: number): Position {
+    const easeOutCubic = (t: number): number => 1 - Math.pow(1 - t, 3);
+    const easedFactor = easeOutCubic(Math.min(1, Math.max(0, factor)));
+    
+    return {
+      x: from.x + (to.x - from.x) * easedFactor,
+      y: from.y + (to.y - from.y) * easedFactor
+    };
+  }
+
+  private update(deltaTime: number) {
     // Accumulate time since last game update
     this.timeSinceLastUpdate += deltaTime;
     
+    // Calculate interpolation factor
+    this.interpolationFactor = Math.min(1, this.timeSinceLastUpdate / this.gameUpdateInterval);
+    
     // Only update game state at fixed intervals
     if (this.timeSinceLastUpdate >= this.gameUpdateInterval) {
+      // Capture current state before update
+      this.lastGameState = this.captureGameState();
+      
       this.updater.update(
         this.snakes,
         this.food,
@@ -209,6 +244,7 @@ export class GameBoard {
       
       // Reset the timer
       this.timeSinceLastUpdate = 0;
+      this.interpolationFactor = 0;
     }
   }
 
@@ -226,8 +262,16 @@ export class GameBoard {
       // Update the game state based on the time passed
       this.update(deltaTime);
       
-      // Draw the current game state
-      this.renderer.draw(this.snakes, this.food, this.powerUps, this.powerUpTypes);
+      // Create interpolated rendering data
+      const renderData = this.createInterpolatedRenderData();
+      
+      // Draw the current game state with interpolation
+      this.renderer.drawWithInterpolation(
+        renderData.snakes,
+        renderData.food,
+        this.powerUps,
+        this.powerUpTypes
+      );
       
       // Save the time of this frame
       this.lastFrameTime = timestamp;
@@ -239,6 +283,40 @@ export class GameBoard {
     }
   };
 
+  private createInterpolatedRenderData() {
+    if (!this.lastGameState || this.interpolationFactor === 0) {
+      return {
+        snakes: this.snakes,
+        food: this.food
+      };
+    }
+
+    const interpolatedSnakes = this.snakes.map((currentSnake, index) => {
+      const lastSnake = this.lastGameState!.snakes[index];
+      if (!lastSnake || !currentSnake.isAlive) {
+        return currentSnake;
+      }
+
+      // Create interpolated snake with smooth movement
+      const interpolatedBody = currentSnake.body.map((currentSegment, segIndex) => {
+        const lastSegment = lastSnake.body[segIndex];
+        if (!lastSegment) return currentSegment;
+        
+        return this.interpolatePosition(lastSegment, currentSegment, this.interpolationFactor);
+      });
+
+      return {
+        ...currentSnake,
+        body: interpolatedBody
+      };
+    });
+
+    return {
+      snakes: interpolatedSnakes,
+      food: this.food
+    };
+  }
+
   start() {
     // Prevent multiple game loops
     if (this.isRunning) return;
@@ -246,6 +324,8 @@ export class GameBoard {
     this.isRunning = true;
     this.lastFrameTime = 0;
     this.timeSinceLastUpdate = 0;
+    this.lastGameState = null;
+    this.interpolationFactor = 0;
     this.animationFrame = requestAnimationFrame(this.gameLoop);
   }
 
@@ -262,8 +342,8 @@ export class GameBoard {
   }
 
   setGameSpeed(speed: number) {
-    // Change base interval from 300ms to 200ms for better speed scaling with 60 FPS
-    this.gameUpdateInterval = Math.floor(200 / speed); // Adjust update interval based on speed
+    // Adjust base interval for smooth speed scaling
+    this.gameUpdateInterval = Math.floor(100 / speed); // Base 100ms, adjustable by speed
     console.log(`Game speed set to ${speed}, update interval: ${this.gameUpdateInterval}ms`);
   }
 }

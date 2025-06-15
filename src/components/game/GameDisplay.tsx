@@ -129,7 +129,11 @@ export function GameDisplay({
       <canvas
         ref={canvasRef}
         className="w-full h-full rounded-xl bg-black/80 border-2 border-purple-400/30 shadow-[0_0_50px_rgba(168,85,247,0.4)] backdrop-blur-sm"
-        style={{ imageRendering: 'pixelated' }}
+        style={{ 
+          imageRendering: 'pixelated',
+          willChange: 'transform',
+          transform: 'translate3d(0, 0, 0)' // Enable hardware acceleration
+        }}
       />
     </div>
   );

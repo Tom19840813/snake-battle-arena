@@ -12,6 +12,10 @@ export class GameRenderer {
     this.ctx = ctx;
     this.gridSize = gridSize;
     this.cellSize = ctx.canvas.width / gridSize;
+    
+    // Enable hardware acceleration hints
+    this.ctx.imageSmoothingEnabled = true;
+    this.ctx.imageSmoothingQuality = 'high';
   }
 
   updateCellSize() {
@@ -19,8 +23,18 @@ export class GameRenderer {
   }
 
   draw(snakes: Snake[], food: Position[], powerUps: Position[], powerUpTypes: string[]) {
+    this.drawWithInterpolation(snakes, food, powerUps, powerUpTypes);
+  }
+
+  drawWithInterpolation(snakes: any[], food: Position[], powerUps: Position[], powerUpTypes: string[]) {
     const { width, height } = this.ctx.canvas;
+    
+    // Use hardware-accelerated clearing
     this.ctx.clearRect(0, 0, width, height);
+    
+    // Enable anti-aliasing for smoother visuals
+    this.ctx.save();
+    this.ctx.translate(0.5, 0.5); // Sub-pixel positioning for smoother lines
 
     // Draw grid
     this.drawGrid();
@@ -31,25 +45,27 @@ export class GameRenderer {
     // Draw power-ups
     this.drawPowerUps(powerUps, powerUpTypes);
     
-    // Draw snakes
-    this.drawSnakes(snakes);
+    // Draw snakes with interpolation support
+    this.drawInterpolatedSnakes(snakes);
+    
+    this.ctx.restore();
   }
 
   private drawGrid() {
     const { width, height } = this.ctx.canvas;
     this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
     this.ctx.lineWidth = 1;
+    
+    // Use beginPath for better performance
+    this.ctx.beginPath();
     for (let i = 0; i <= this.gridSize; i++) {
       const pos = i * this.cellSize;
-      this.ctx.beginPath();
       this.ctx.moveTo(pos, 0);
       this.ctx.lineTo(pos, height);
-      this.ctx.stroke();
-      this.ctx.beginPath();
       this.ctx.moveTo(0, pos);
       this.ctx.lineTo(width, pos);
-      this.ctx.stroke();
     }
+    this.ctx.stroke();
   }
 
   private drawFood(food: Position[]) {
@@ -99,7 +115,7 @@ export class GameRenderer {
     });
   }
 
-  private drawSnakes(snakes: Snake[]) {
+  private drawInterpolatedSnakes(snakes: any[]) {
     snakes.forEach(snake => {
       if (!snake.isAlive) {
         // If it's the player snake and just died, draw death animation
@@ -109,11 +125,11 @@ export class GameRenderer {
         return;
       }
       
-      this.drawSnake(snake);
+      this.drawInterpolatedSnake(snake);
     });
   }
 
-  private drawDeathAnimation(snake: Snake) {
+  private drawDeathAnimation(snake: any) {
     const head = snake.body[0];
     
     // Draw explosion effect
@@ -143,12 +159,12 @@ export class GameRenderer {
     this.ctx.fill();
   }
 
-  private drawSnake(snake: Snake) {
+  private drawInterpolatedSnake(snake: any) {
     // Apply special rendering for invisible snakes
-    const isInvisible = snake.hasPowerUp("invisible");
-    const hasShield = snake.hasPowerUp("shield");
+    const isInvisible = snake.hasPowerUp && snake.hasPowerUp("invisible");
+    const hasShield = snake.hasPowerUp && snake.hasPowerUp("shield");
     
-    snake.body.forEach((segment, index) => {
+    snake.body.forEach((segment: any, index: number) => {
       // Rainbow pattern
       let color = snake.color;
       if (snake.activePattern === "rainbow") {
@@ -167,13 +183,14 @@ export class GameRenderer {
       const alphaHex = Math.floor(alpha * 255).toString(16).padStart(2, '0');
       this.ctx.fillStyle = `${color}${alphaHex}`;
       
-      // Draw snake segment
-      this.ctx.fillRect(
-        segment.x * this.cellSize,
-        segment.y * this.cellSize,
-        this.cellSize,
-        this.cellSize
-      );
+      // Draw snake segment with sub-pixel positioning for smoothness
+      const x = segment.x * this.cellSize;
+      const y = segment.y * this.cellSize;
+      
+      // Add subtle rounding for smoother appearance
+      this.ctx.beginPath();
+      this.ctx.roundRect(x, y, this.cellSize, this.cellSize, this.cellSize * 0.1);
+      this.ctx.fill();
       
       // Draw patterns
       if (snake.activePattern === "gradient" && index === 0) {
@@ -208,41 +225,50 @@ export class GameRenderer {
     gradient.addColorStop(0, 'white');
     gradient.addColorStop(1, color);
     this.ctx.fillStyle = gradient;
-    this.ctx.fillRect(
+    this.ctx.beginPath();
+    this.ctx.roundRect(
       segment.x * this.cellSize,
       segment.y * this.cellSize,
       this.cellSize,
-      this.cellSize
+      this.cellSize,
+      this.cellSize * 0.1
     );
+    this.ctx.fill();
   }
 
   private drawPulsePattern(segment: Position) {
     const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 200);
     this.ctx.globalAlpha = pulse;
     this.ctx.fillStyle = "white";
-    this.ctx.fillRect(
+    this.ctx.beginPath();
+    this.ctx.roundRect(
       segment.x * this.cellSize + this.cellSize * 0.25,
       segment.y * this.cellSize + this.cellSize * 0.25,
       this.cellSize * 0.5,
-      this.cellSize * 0.5
+      this.cellSize * 0.5,
+      this.cellSize * 0.1
     );
+    this.ctx.fill();
     this.ctx.globalAlpha = 1;
   }
 
-  private drawGlowEffect(snake: Snake) {
+  private drawGlowEffect(snake: any) {
     const head = snake.body[0];
     this.ctx.shadowBlur = 10;
     this.ctx.shadowColor = snake.color;
-    this.ctx.fillRect(
+    this.ctx.beginPath();
+    this.ctx.roundRect(
       head.x * this.cellSize,
       head.y * this.cellSize,
       this.cellSize,
-      this.cellSize
+      this.cellSize,
+      this.cellSize * 0.1
     );
+    this.ctx.fill();
     this.ctx.shadowBlur = 0;
   }
 
-  private drawShieldEffect(snake: Snake) {
+  private drawShieldEffect(snake: any) {
     const head = snake.body[0];
     this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
     this.ctx.lineWidth = 2;
