@@ -28,7 +28,7 @@ export class GameBoard {
   private lastFrameTime: number = 0;
   private targetFPS: number = 30; // Changed from 60 to 30 for smoother performance
   private frameInterval: number = 1000 / 30; // Changed from 1000/60 to 1000/30 (33.33ms per frame)
-  private gameUpdateInterval: number = 100;
+  private gameUpdateInterval: number = 150; // Increased from 100ms to 150ms for better performance
   private timeSinceLastUpdate: number = 0;
   private startTime: number;
   private playerSnake: Snake | null = null;
@@ -347,45 +347,14 @@ export class GameBoard {
         this.updateDifficultyBasedOnScore();
       }
 
-      // Update all snakes
+      // Update all snakes AI first
       this.snakes.forEach(snake => {
         if (!snake.isPlayer) { // Only call AI think for non-player snakes
           snake.think(this.food, this.snakes.filter(s => s !== snake));
         }
       });
 
-      // Check player collision with visual death effect
-      if (this.playerSnake && this.playerSnake.isAlive) {
-        const nextPos = {
-          x: this.playerSnake.body[0].x + this.playerSnake.direction.x,
-          y: this.playerSnake.body[0].y + this.playerSnake.direction.y
-        };
-        
-        // Skip collision check if player has shield
-        if (!this.playerSnake.hasPowerUp("shield")) {
-          const hasCollided = 
-            nextPos.x < 0 ||
-            nextPos.x >= this.gridSize ||
-            nextPos.y < 0 ||
-            nextPos.y >= this.gridSize ||
-            this.playerSnake.body.slice(1).some(segment => 
-              segment.x === nextPos.x && segment.y === nextPos.y
-            ) ||
-            this.snakes.filter(s => s !== this.playerSnake).some(snake => 
-              snake.isAlive && snake.body.some(segment => 
-                segment.x === nextPos.x && segment.y === nextPos.y
-              )
-            );
-          
-          if (hasCollided) {
-            console.log("Player collision detected!");
-            this.playerSnake.isAlive = false;
-            this.playerDeathDetected = true; // Flag the death for immediate detection
-          }
-        }
-      }
-
-      // Move snakes and check for food/power-up consumption
+      // Move snakes and check for food/power-up consumption FIRST
       this.snakes.forEach(snake => {
         if (!snake.isAlive) return;
         
@@ -415,6 +384,56 @@ export class GameBoard {
             // Remove the power-up
             this.powerUps.splice(powerUpIndex, 1);
             this.powerUpTypes.splice(powerUpIndex, 1);
+          }
+        }
+      });
+
+      // THEN check for collisions AFTER movement and food consumption
+      this.snakes.forEach(snake => {
+        if (!snake.isAlive) return;
+        
+        const head = snake.body[0];
+        
+        // Skip collision check if snake has shield
+        if (snake.isPlayer && snake.hasPowerUp && snake.hasPowerUp("shield")) {
+          return;
+        }
+        
+        // Check wall collision
+        if (head.x < 0 || head.x >= this.gridSize || head.y < 0 || head.y >= this.gridSize) {
+          snake.isAlive = false;
+          if (snake.isPlayer) {
+            console.log("Player collision with wall detected!");
+            this.playerDeathDetected = true;
+          }
+          return;
+        }
+        
+        // Check self collision (skip head, start from index 1)
+        for (let i = 1; i < snake.body.length; i++) {
+          if (head.x === snake.body[i].x && head.y === snake.body[i].y) {
+            snake.isAlive = false;
+            if (snake.isPlayer) {
+              console.log("Player self-collision detected!");
+              this.playerDeathDetected = true;
+            }
+            return;
+          }
+        }
+        
+        // Check collision with other snakes
+        for (const otherSnake of this.snakes) {
+          if (otherSnake === snake || !otherSnake.isAlive) continue;
+          
+          for (const segment of otherSnake.body) {
+            if (head.x === segment.x && head.y === segment.y) {
+              snake.isAlive = false;
+              if (snake.isPlayer) {
+                console.log("Player collision with other snake detected!");
+                this.playerDeathDetected = true;
+              }
+              return;
+            }
           }
         }
       });
