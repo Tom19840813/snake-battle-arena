@@ -33,7 +33,7 @@ export function GameDisplay({
     const canvas = canvasRef.current;
     const container = containerRef.current;
 
-    // Set canvas size
+    // Set canvas size FIRST
     const updateCanvasSize = () => {
       const containerWidth = container.clientWidth;
       const containerHeight = container.clientHeight;
@@ -43,8 +43,11 @@ export function GameDisplay({
       canvas.height = size;
       canvas.style.width = `${size}px`;
       canvas.style.height = `${size}px`;
+      
+      console.log(`Canvas sized to: ${size}x${size}`);
     };
 
+    // Size the canvas first
     updateCanvasSize();
 
     // Clean up previous game instance
@@ -54,9 +57,10 @@ export function GameDisplay({
     }
 
     try {
-      // Initialize new game instance with correct constructor signature
+      // Initialize new game instance AFTER canvas is sized
       const ctx = canvas.getContext('2d');
-      if (ctx) {
+      if (ctx && canvas.width > 0 && canvas.height > 0) {
+        console.log('Creating GameBoard with canvas dimensions:', canvas.width, canvas.height);
         gameRef.current = new GameBoard(ctx, aiOpponentCount, playerMode, difficulty);
         gameRef.current.onStatsUpdate = onStatsUpdate;
         
@@ -70,6 +74,10 @@ export function GameDisplay({
         
         // Start the game
         gameRef.current.start();
+        
+        console.log('GameBoard created and started successfully');
+      } else {
+        console.error('Canvas context not available or canvas not sized properly');
       }
       
       onGameBoardReady(gameRef.current);
