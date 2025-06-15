@@ -26,8 +26,8 @@ export class GameBoard {
   private cellSize: number;
   private animationFrame: number | null = null;
   private lastFrameTime: number = 0;
-  private targetFPS: number = 60;
-  private frameInterval: number = 1000 / 60; // 60 FPS
+  private targetFPS: number = 30; // Changed from 60 to 30 for smoother performance
+  private frameInterval: number = 1000 / 30; // Changed from 1000/60 to 1000/30 (33.33ms per frame)
   private gameUpdateInterval: number = 100;
   private timeSinceLastUpdate: number = 0;
   private startTime: number;
