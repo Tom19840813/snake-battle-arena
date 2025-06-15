@@ -54,16 +54,23 @@ export function GameDisplay({
     }
 
     try {
-      // Initialize new game instance
-      gameRef.current = new GameBoard(
-        canvas,
-        playerMode,
-        aiOpponentCount,
-        difficulty,
-        activeSkin,
-        onStatsUpdate,
-        gameSpeed
-      );
+      // Initialize new game instance with correct constructor signature
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        gameRef.current = new GameBoard(ctx, aiOpponentCount, playerMode, difficulty);
+        gameRef.current.onStatsUpdate = onStatsUpdate;
+        
+        // Set player skin if in player mode
+        if (playerMode && activeSkin) {
+          gameRef.current.setPlayerSkin(activeSkin);
+        }
+        
+        // Set game speed
+        gameRef.current.setGameSpeed(gameSpeed);
+        
+        // Start the game
+        gameRef.current.start();
+      }
       
       onGameBoardReady(gameRef.current);
     } catch (error) {
@@ -73,9 +80,7 @@ export function GameDisplay({
     // Handle resize
     const handleResize = () => {
       updateCanvasSize();
-      if (gameRef.current) {
-        gameRef.current.resize();
-      }
+      // GameBoard doesn't have a resize method, so we don't call it
     };
 
     window.addEventListener('resize', handleResize);
