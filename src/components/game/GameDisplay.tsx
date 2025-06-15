@@ -26,9 +26,11 @@ export function GameDisplay({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameRef = useRef<GameBoard | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const initializedRef = useRef(false);
 
+  // Initialize game only once
   useEffect(() => {
-    if (!canvasRef.current || !containerRef.current) return;
+    if (!canvasRef.current || !containerRef.current || initializedRef.current) return;
 
     const canvas = canvasRef.current;
     const container = containerRef.current;
@@ -50,12 +52,6 @@ export function GameDisplay({
     // Size the canvas first
     updateCanvasSize();
 
-    // Clean up previous game instance
-    if (gameRef.current) {
-      gameRef.current.stop();
-      gameRef.current = null;
-    }
-
     try {
       // Initialize new game instance AFTER canvas is sized
       const ctx = canvas.getContext('2d');
@@ -76,6 +72,7 @@ export function GameDisplay({
         gameRef.current.start();
         
         console.log('GameBoard created and started successfully');
+        initializedRef.current = true;
       } else {
         console.error('Canvas context not available or canvas not sized properly');
       }
@@ -88,7 +85,6 @@ export function GameDisplay({
     // Handle resize
     const handleResize = () => {
       updateCanvasSize();
-      // GameBoard doesn't have a resize method, so we don't call it
     };
 
     window.addEventListener('resize', handleResize);
@@ -99,15 +95,31 @@ export function GameDisplay({
         gameRef.current.stop();
         gameRef.current = null;
       }
+      initializedRef.current = false;
       onGameBoardReady(null);
     };
-  }, [playerMode, aiOpponentCount, difficulty, activeSkin, gameSpeed, onStatsUpdate, onGameBoardReady]);
+  }, []); // Empty dependency array to run only once
 
+  // Handle game over separately
   useEffect(() => {
     if (gameOver && gameRef.current) {
       gameRef.current.stop();
     }
   }, [gameOver]);
+
+  // Handle skin changes
+  useEffect(() => {
+    if (gameRef.current && playerMode && activeSkin) {
+      gameRef.current.setPlayerSkin(activeSkin);
+    }
+  }, [activeSkin, playerMode]);
+
+  // Handle game speed changes
+  useEffect(() => {
+    if (gameRef.current) {
+      gameRef.current.setGameSpeed(gameSpeed);
+    }
+  }, [gameSpeed]);
 
   return (
     <div 
