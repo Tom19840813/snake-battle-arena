@@ -1,4 +1,3 @@
-
 import { Snake } from './Snake';
 import { Position } from './types';
 import { SKINS } from './GameAssets';
@@ -16,9 +15,9 @@ export class GameBoard {
   private gridSize: number;
   private animationFrame: number | null = null;
   private lastFrameTime: number = 0;
-  private targetFPS: number = 30;
-  private frameInterval: number = 1000 / 30;
-  private gameUpdateInterval: number = 150;
+  private targetFPS: number = 60;
+  private frameInterval: number = 1000 / 60;
+  private gameUpdateInterval: number = 100;
   private timeSinceLastUpdate: number = 0;
   private playerSnake: Snake | null = null;
   private isPlayerMode: boolean = false;
@@ -263,8 +262,8 @@ export class GameBoard {
   }
 
   setGameSpeed(speed: number) {
-    // Change base interval from 100ms to 300ms for more manageable speed
-    this.gameUpdateInterval = Math.floor(300 / speed); // Adjust update interval based on speed
+    // Change base interval from 300ms to 200ms for better speed scaling with 60 FPS
+    this.gameUpdateInterval = Math.floor(200 / speed); // Adjust update interval based on speed
     console.log(`Game speed set to ${speed}, update interval: ${this.gameUpdateInterval}ms`);
   }
 }
