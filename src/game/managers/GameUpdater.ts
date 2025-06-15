@@ -1,4 +1,3 @@
-
 import { Snake } from '../Snake';
 import { Position } from '../types';
 import { POWER_UPS } from '../GameAssets';
@@ -33,22 +32,14 @@ export class GameUpdater {
       this.updateDifficultyBasedOnScore(snakes, difficulty);
     }
 
-    // Update all snakes AI first
-    snakes.forEach(snake => {
-      if (!snake.isPlayer) {
-        snake.think(food, snakes.filter(s => s !== snake));
-      }
-    });
+    // Check collisions BEFORE any movement or food consumption
+    this.checkCollisions(snakes);
 
-    // Store which snakes ate food this frame for collision detection
-    const snakesAtFood = new Map<Snake, boolean>();
-
-    // Move snakes and check for food/power-up consumption FIRST
+    // Move snakes and check for food/power-up consumption AFTER collision check
     snakes.forEach(snake => {
       if (!snake.isAlive) return;
       
       const ate = snake.move(food);
-      snakesAtFood.set(snake, ate);
       
       if (ate) {
         const foodIndex = food.findIndex(
@@ -80,9 +71,6 @@ export class GameUpdater {
         }
       }
     });
-
-    // THEN check for collisions AFTER movement and food consumption
-    this.checkCollisions(snakes, snakesAtFood);
   }
 
   private spawnPowerUp(
@@ -140,17 +128,17 @@ export class GameUpdater {
     }
   }
 
-  private checkCollisions(snakes: Snake[], snakesAtFood: Map<Snake, boolean>) {
+  private checkCollisions(snakes: Snake[]) {
     snakes.forEach(snake => {
       if (!snake.isAlive) return;
       
       const head = snake.body[0];
-      const ateFood = snakesAtFood.get(snake) || false;
       
-      console.log(`Collision check for snake - head: ${head.x},${head.y}, ate food: ${ateFood}, body length: ${snake.body.length}`);
+      console.log(`Pre-move collision check for snake - head: ${head.x},${head.y}, body length: ${snake.body.length}`);
       
       // Skip collision check if snake has shield
       if (snake.isPlayer && snake.hasPowerUp && snake.hasPowerUp("shield")) {
+        console.log("Snake has shield, skipping collision check");
         return;
       }
       
@@ -165,12 +153,12 @@ export class GameUpdater {
         return;
       }
       
-      // Check self collision (skip head, start from index 1)
-      // If snake just ate food, we need to be more careful with self-collision
-      const startIndex = ateFood ? 2 : 1; // Skip more segments if just ate food
-      for (let i = startIndex; i < snake.body.length; i++) {
+      // Improved self collision check - skip more segments if snake is long
+      // This prevents false positives when the snake is growing or moving in tight patterns
+      const minSegmentsToSkip = Math.max(2, Math.min(4, Math.floor(snake.body.length / 10)));
+      for (let i = minSegmentsToSkip; i < snake.body.length; i++) {
         if (head.x === snake.body[i].x && head.y === snake.body[i].y) {
-          console.log(`Snake died from self-collision at segment ${i}`);
+          console.log(`Snake died from self-collision at segment ${i}, skipped ${minSegmentsToSkip} segments`);
           snake.isAlive = false;
           if (snake.isPlayer) {
             console.log("Player self-collision detected!");
@@ -197,7 +185,7 @@ export class GameUpdater {
         }
       }
       
-      console.log("Snake survived collision checks");
+      console.log("Snake survived pre-move collision checks");
     });
   }
 }

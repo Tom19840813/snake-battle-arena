@@ -1,4 +1,3 @@
-
 import { Snake } from '../Snake';
 import { Position } from '../types';
 import { POWER_UPS } from '../GameAssets';
@@ -45,8 +44,8 @@ export class GameRenderer {
     // Draw power-ups
     this.drawPowerUps(powerUps, powerUpTypes);
     
-    // Draw snakes with interpolation support
-    this.drawInterpolatedSnakes(snakes);
+    // Draw snakes with improved rendering
+    this.drawSnakes(snakes);
     
     this.ctx.restore();
   }
@@ -115,7 +114,7 @@ export class GameRenderer {
     });
   }
 
-  private drawInterpolatedSnakes(snakes: any[]) {
+  private drawSnakes(snakes: any[]) {
     snakes.forEach(snake => {
       if (!snake.isAlive) {
         // If it's the player snake and just died, draw death animation
@@ -125,8 +124,69 @@ export class GameRenderer {
         return;
       }
       
-      this.drawInterpolatedSnake(snake);
+      this.drawSnakeImproved(snake);
     });
+  }
+
+  private drawSnakeImproved(snake: any) {
+    // Apply special rendering for invisible snakes
+    const isInvisible = snake.hasPowerUp && snake.hasPowerUp("invisible");
+    const hasShield = snake.hasPowerUp && snake.hasPowerUp("shield");
+    
+    // Draw snake body with improved segment rendering
+    snake.body.forEach((segment: any, index: number) => {
+      // Rainbow pattern
+      let color = snake.color;
+      if (snake.activePattern === "rainbow") {
+        const hue = (Date.now() / 20 + index * 10) % 360;
+        color = `hsl(${hue}, 70%, 60%)`;
+      }
+      
+      // Calculate segment opacity with better falloff
+      let alpha = 1;
+      if (isInvisible) {
+        alpha = 0.3; // Very transparent when invisible
+      } else {
+        // Smooth opacity gradient from head to tail
+        alpha = index === 0 ? 1 : Math.max(0.3, 1 - (index / snake.body.length) * 0.7);
+      }
+      
+      // Improved segment rendering with proper positioning
+      const x = segment.x * this.cellSize;
+      const y = segment.y * this.cellSize;
+      const size = this.cellSize * 0.95; // Slightly smaller to prevent overlapping artifacts
+      const offset = this.cellSize * 0.025; // Center the smaller segments
+      
+      this.ctx.fillStyle = color;
+      this.ctx.globalAlpha = alpha;
+      
+      // Draw segment with rounded corners for smoother appearance
+      this.ctx.beginPath();
+      this.ctx.roundRect(x + offset, y + offset, size, size, size * 0.15);
+      this.ctx.fill();
+      
+      // Draw patterns
+      if (snake.activePattern === "gradient" && index === 0) {
+        this.drawGradientPattern(segment, color);
+      }
+      
+      if (snake.activePattern === "pulse") {
+        this.drawPulsePattern(segment);
+      }
+      
+      // Reset alpha for next segment
+      this.ctx.globalAlpha = 1;
+    });
+    
+    // Draw glow effect
+    if (snake.glowEffect) {
+      this.drawGlowEffect(snake);
+    }
+    
+    // Draw shield effect
+    if (hasShield) {
+      this.drawShieldEffect(snake);
+    }
   }
 
   private drawDeathAnimation(snake: any) {
@@ -157,60 +217,6 @@ export class GameRenderer {
       Math.PI * 2
     );
     this.ctx.fill();
-  }
-
-  private drawInterpolatedSnake(snake: any) {
-    // Apply special rendering for invisible snakes
-    const isInvisible = snake.hasPowerUp && snake.hasPowerUp("invisible");
-    const hasShield = snake.hasPowerUp && snake.hasPowerUp("shield");
-    
-    snake.body.forEach((segment: any, index: number) => {
-      // Rainbow pattern
-      let color = snake.color;
-      if (snake.activePattern === "rainbow") {
-        const hue = (Date.now() / 20 + index * 10) % 360;
-        color = `hsl(${hue}, 70%, 60%)`;
-      }
-      
-      // Calculate segment opacity
-      let alpha = 1;
-      if (isInvisible) {
-        alpha = 0.3; // Very transparent when invisible
-      } else {
-        alpha = index === 0 ? 1 : 1 - (index / snake.body.length) * 0.6;
-      }
-      
-      const alphaHex = Math.floor(alpha * 255).toString(16).padStart(2, '0');
-      this.ctx.fillStyle = `${color}${alphaHex}`;
-      
-      // Draw snake segment with sub-pixel positioning for smoothness
-      const x = segment.x * this.cellSize;
-      const y = segment.y * this.cellSize;
-      
-      // Add subtle rounding for smoother appearance
-      this.ctx.beginPath();
-      this.ctx.roundRect(x, y, this.cellSize, this.cellSize, this.cellSize * 0.1);
-      this.ctx.fill();
-      
-      // Draw patterns
-      if (snake.activePattern === "gradient" && index === 0) {
-        this.drawGradientPattern(segment, color);
-      }
-      
-      if (snake.activePattern === "pulse") {
-        this.drawPulsePattern(segment);
-      }
-    });
-    
-    // Draw glow effect
-    if (snake.glowEffect) {
-      this.drawGlowEffect(snake);
-    }
-    
-    // Draw shield effect
-    if (hasShield) {
-      this.drawShieldEffect(snake);
-    }
   }
 
   private drawGradientPattern(segment: Position, color: string) {
