@@ -354,17 +354,24 @@ export class GameBoard {
         }
       });
 
+      // Store which snakes ate food this frame for collision detection
+      const snakesAtFood = new Map<Snake, boolean>();
+
       // Move snakes and check for food/power-up consumption FIRST
       this.snakes.forEach(snake => {
         if (!snake.isAlive) return;
         
         const ate = snake.move(this.food);
+        snakesAtFood.set(snake, ate);
+        
         if (ate) {
           const foodIndex = this.food.findIndex(
             f => f.x === snake.body[0].x && f.y === snake.body[0].y
           );
-          this.food.splice(foodIndex, 1);
-          this.spawnFood();
+          if (foodIndex !== -1) {
+            this.food.splice(foodIndex, 1);
+            this.spawnFood();
+          }
         }
         
         // Check for power-up pickup
@@ -393,6 +400,9 @@ export class GameBoard {
         if (!snake.isAlive) return;
         
         const head = snake.body[0];
+        const ateFood = snakesAtFood.get(snake) || false;
+        
+        console.log(`Collision check for snake - head: ${head.x},${head.y}, ate food: ${ateFood}, body length: ${snake.body.length}`);
         
         // Skip collision check if snake has shield
         if (snake.isPlayer && snake.hasPowerUp && snake.hasPowerUp("shield")) {
@@ -401,6 +411,7 @@ export class GameBoard {
         
         // Check wall collision
         if (head.x < 0 || head.x >= this.gridSize || head.y < 0 || head.y >= this.gridSize) {
+          console.log("Snake died from wall collision");
           snake.isAlive = false;
           if (snake.isPlayer) {
             console.log("Player collision with wall detected!");
@@ -410,8 +421,11 @@ export class GameBoard {
         }
         
         // Check self collision (skip head, start from index 1)
-        for (let i = 1; i < snake.body.length; i++) {
+        // If snake just ate food, we need to be more careful with self-collision
+        const startIndex = ateFood ? 2 : 1; // Skip more segments if just ate food
+        for (let i = startIndex; i < snake.body.length; i++) {
           if (head.x === snake.body[i].x && head.y === snake.body[i].y) {
+            console.log(`Snake died from self-collision at segment ${i}`);
             snake.isAlive = false;
             if (snake.isPlayer) {
               console.log("Player self-collision detected!");
@@ -427,6 +441,7 @@ export class GameBoard {
           
           for (const segment of otherSnake.body) {
             if (head.x === segment.x && head.y === segment.y) {
+              console.log("Snake died from collision with another snake");
               snake.isAlive = false;
               if (snake.isPlayer) {
                 console.log("Player collision with other snake detected!");
@@ -436,6 +451,8 @@ export class GameBoard {
             }
           }
         }
+        
+        console.log("Snake survived collision checks");
       });
 
       this.updateStats();
