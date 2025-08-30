@@ -20,8 +20,6 @@ export class SnakeMovement {
   static move(snake: any, food: Position[]): boolean {
     if (!snake.isAlive) return false;
     
-    console.log(`Snake move called - body length: ${snake.body.length}, direction: ${snake.direction.x},${snake.direction.y}`);
-    
     // Update power-ups
     snake.updatePowerUps();
     
@@ -37,8 +35,6 @@ export class SnakeMovement {
         y: snake.body[0].y + snake.direction.y
       };
       
-      console.log(`New head position: ${newHead.x},${newHead.y}`);
-      
       // Food magnet power-up: attract nearby food
       if (snake.hasPowerUp("magnet")) {
         this.magnetizeFoodTowards(snake.body[0], food, snake.magnetRange);
@@ -47,31 +43,22 @@ export class SnakeMovement {
       // Check if eating food BEFORE any body manipulation
       const foodIndex = food.findIndex(f => f.x === newHead.x && f.y === newHead.y);
       const isEatingFood = foodIndex !== -1;
-      
-      console.log(`Food check - eating: ${isEatingFood}, food index: ${foodIndex}`);
 
       if (isEatingFood) {
-        console.log(`Snake eating food! Score before: ${snake.score}`);
         snake.score += 10;
         hasEatenFood = true;
-        console.log(`Score after eating: ${snake.score}`);
       }
 
       // Add new head first
       snake.body.unshift(newHead);
-      console.log(`Body length after adding head: ${snake.body.length}`);
       
       // Only remove tail if NOT eating food
       if (!isEatingFood) {
         snake.body.pop();
-        console.log(`Removed tail - body length now: ${snake.body.length}`);
-      } else {
-        console.log(`Did not remove tail because we ate food - body length: ${snake.body.length}`);
       }
       
       // Only continue multi-step movement if not eating
       if (isEatingFood) {
-        console.log("Breaking movement loop because we ate food");
         break;
       }
     }
@@ -89,7 +76,6 @@ export class SnakeMovement {
       }
     }
     
-    console.log(`Move completed - ate food: ${hasEatenFood}, final body length: ${snake.body.length}`);
     return hasEatenFood;
   }
 

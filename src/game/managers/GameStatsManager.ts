@@ -15,6 +15,7 @@ export interface GameStats {
   difficulty: number;
   unlockedSkins: number;
   activePowerUps: any[];
+  isPlayerAlive: boolean;
 }
 
 export class GameStatsManager {
@@ -74,7 +75,8 @@ export class GameStatsManager {
         playerScore,
         difficulty,
         unlockedSkins,
-        activePowerUps
+        activePowerUps,
+        isPlayerAlive: playerSnake?.isAlive ?? false
       });
     }
   }
