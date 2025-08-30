@@ -21,6 +21,7 @@ interface GameCanvasProps {
   onRestartGame: () => void;
   onSkinChange: (skinId: string) => void;
   gameSpeed?: number;
+  performanceMode?: boolean;
 }
 
 export function GameCanvas({
@@ -34,7 +35,8 @@ export function GameCanvas({
   onStatsUpdate,
   onRestartGame,
   onSkinChange,
-  gameSpeed = 0.5
+  gameSpeed = 1.5,
+  performanceMode = false
 }: GameCanvasProps) {
   const gameRef = useRef<GameBoard | null>(null);
 
@@ -60,6 +62,7 @@ export function GameCanvas({
         activeSkin={activeSkin}
         onStatsUpdate={onStatsUpdate}
         gameSpeed={gameSpeed}
+        performanceMode={performanceMode}
         onGameBoardReady={handleGameBoardReady}
       />
       

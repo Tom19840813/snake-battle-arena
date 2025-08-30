@@ -15,9 +15,9 @@ export class GameBoard {
   private gridSize: number;
   private animationFrame: number | null = null;
   private lastFrameTime: number = 0;
-  private targetFPS: number = 60;
-  private frameInterval: number = 1000 / 60;
-  private gameUpdateInterval: number = 50; // Reduced from 100ms to 50ms for smoother updates
+  private targetFPS: number = 120; // Adaptive FPS for smoother gameplay
+  private frameInterval: number = 1000 / 120;
+  private gameUpdateInterval: number = 32; // Optimized for ~30 updates per second
   private timeSinceLastUpdate: number = 0;
   private playerSnake: Snake | null = null;
   private isPlayerMode: boolean = false;
@@ -26,9 +26,11 @@ export class GameBoard {
   private totalOpponents: number = 20;
   private isRunning: boolean = false;
   
-  // Interpolation properties
+  // Optimized interpolation properties
   private lastGameState: { snakes: any[], food: Position[] } | null = null;
   private interpolationFactor: number = 0;
+  private performanceMode: boolean = false;
+  private deltaTimeAccumulator: number = 0;
   
   // Manager instances
   private statsManager: GameStatsManager;
@@ -209,26 +211,25 @@ export class GameBoard {
   }
 
   private interpolatePosition(from: Position, to: Position, factor: number): Position {
-    const easeOutCubic = (t: number): number => 1 - Math.pow(1 - t, 3);
-    const easedFactor = easeOutCubic(Math.min(1, Math.max(0, factor)));
+    // Use linear interpolation for more predictable movement
+    const clampedFactor = Math.min(1, Math.max(0, factor));
     
     return {
-      x: from.x + (to.x - from.x) * easedFactor,
-      y: from.y + (to.y - from.y) * easedFactor
+      x: from.x + (to.x - from.x) * clampedFactor,
+      y: from.y + (to.y - from.y) * clampedFactor
     };
   }
 
   private update(deltaTime: number) {
-    // Accumulate time since last game update
-    this.timeSinceLastUpdate += deltaTime;
+    // Accumulate delta time for consistent updates
+    this.deltaTimeAccumulator += deltaTime;
     
-    // Calculate interpolation factor
-    this.interpolationFactor = Math.min(1, this.timeSinceLastUpdate / this.gameUpdateInterval);
-    
-    // Only update game state at fixed intervals
-    if (this.timeSinceLastUpdate >= this.gameUpdateInterval) {
+    // Use fixed timestep with accumulator for consistent game logic
+    while (this.deltaTimeAccumulator >= this.gameUpdateInterval) {
       // Capture current state before update
-      this.lastGameState = this.captureGameState();
+      if (!this.performanceMode) {
+        this.lastGameState = this.captureGameState();
+      }
       
       this.updater.update(
         this.snakes,
@@ -242,8 +243,14 @@ export class GameBoard {
 
       this.statsManager.updateStats(this.snakes, this.food, this.difficulty, this.playerSnake);
       
-      // Reset the timer
-      this.timeSinceLastUpdate = 0;
+      // Subtract fixed timestep from accumulator
+      this.deltaTimeAccumulator -= this.gameUpdateInterval;
+    }
+    
+    // Calculate interpolation factor for smooth rendering
+    if (!this.performanceMode && this.lastGameState) {
+      this.interpolationFactor = this.deltaTimeAccumulator / this.gameUpdateInterval;
+    } else {
       this.interpolationFactor = 0;
     }
   }
@@ -257,25 +264,24 @@ export class GameBoard {
     }
     const deltaTime = timestamp - this.lastFrameTime;
     
-    // Limit to target frame rate
-    if (deltaTime >= this.frameInterval) {
-      // Update the game state based on the time passed
-      this.update(deltaTime);
-      
-      // Create interpolated rendering data
-      const renderData = this.createInterpolatedRenderData();
-      
-      // Draw the current game state with interpolation
-      this.renderer.drawWithInterpolation(
-        renderData.snakes,
-        renderData.food,
-        this.powerUps,
-        this.powerUpTypes
-      );
-      
-      // Save the time of this frame
-      this.lastFrameTime = timestamp;
-    }
+    // Update the game state
+    this.update(deltaTime);
+    
+    // Create rendering data (with or without interpolation based on performance mode)
+    const renderData = this.performanceMode ? 
+      { snakes: this.snakes, food: this.food } : 
+      this.createInterpolatedRenderData();
+    
+    // Draw the current game state
+    this.renderer.drawWithInterpolation(
+      renderData.snakes,
+      renderData.food,
+      this.powerUps,
+      this.powerUpTypes
+    );
+    
+    // Save the time of this frame
+    this.lastFrameTime = timestamp;
     
     // Request the next frame only if the game is still running
     if (this.isRunning) {
@@ -342,8 +348,16 @@ export class GameBoard {
   }
 
   setGameSpeed(speed: number) {
-    // Adjust base interval for smooth speed scaling
-    this.gameUpdateInterval = Math.floor(100 / speed); // Base 100ms, adjustable by speed
-    console.log(`Game speed set to ${speed}, update interval: ${this.gameUpdateInterval}ms`);
+    // Optimized speed calculation for smoother gameplay
+    this.gameUpdateInterval = Math.max(16, Math.floor(64 / speed)); // Base 64ms, min 16ms (60 FPS)
+  }
+
+  setPerformanceMode(enabled: boolean) {
+    this.performanceMode = enabled;
+    // Reset interpolation state when switching modes
+    if (enabled) {
+      this.lastGameState = null;
+      this.interpolationFactor = 0;
+    }
   }
 }

@@ -10,18 +10,21 @@ interface PerformanceOptionsProps {
   onSnakeCountChange: (count: number) => void;
   onHideBackgroundChange: (hide: boolean) => void;
   onGameSpeedChange: (speed: number) => void;
+  onPerformanceModeChange?: (enabled: boolean) => void;
 }
 
-export function PerformanceOptions({
-  onQualityChange,
-  onSnakeCountChange,
+export function PerformanceOptions({ 
+  onQualityChange, 
+  onSnakeCountChange, 
   onHideBackgroundChange,
-  onGameSpeedChange
+  onGameSpeedChange,
+  onPerformanceModeChange 
 }: PerformanceOptionsProps) {
   const [quality, setQuality] = useState<'low' | 'medium' | 'high'>('medium');
   const [snakeCount, setSnakeCount] = useState(15);
   const [hideBackground, setHideBackground] = useState(false);
-  const [gameSpeed, setGameSpeed] = useState(0.5);
+  const [gameSpeed, setGameSpeed] = useState(1.5);
+  const [performanceMode, setPerformanceMode] = useState(false);
 
   const handleQualityChange = (newQuality: 'low' | 'medium' | 'high') => {
     setQuality(newQuality);
@@ -45,11 +48,16 @@ export function PerformanceOptions({
     onGameSpeedChange(speed);
   };
 
+  const handlePerformanceModeChange = (checked: boolean) => {
+    setPerformanceMode(checked);
+    onPerformanceModeChange?.(checked);
+  };
+
   const getSpeedLabel = (speed: number) => {
-    if (speed <= 0.25) return 'ULTRA SLOW';
     if (speed <= 0.5) return 'SLOW';
-    if (speed <= 0.75) return 'MEDIUM';
-    return 'FAST';
+    if (speed <= 1) return 'NORMAL';
+    if (speed <= 2) return 'FAST';
+    return 'ULTRA FAST';
   };
 
   return (
@@ -138,14 +146,26 @@ export function PerformanceOptions({
             </span>
           </div>
           <Slider
-            defaultValue={[0.5]}
-            max={1}
-            min={0.25}
-            step={0.25}
+            defaultValue={[1.5]}
+            max={3}
+            min={0.5}
+            step={0.5}
             value={[gameSpeed]}
             onValueChange={handleGameSpeedChange}
             className="w-full [&_[role=slider]]:bg-gradient-to-r [&_[role=slider]]:from-purple-500 [&_[role=slider]]:to-cyan-500 [&_[role=slider]]:border-0 [&_[role=slider]]:shadow-[0_0_10px_rgba(168,85,247,0.5)]"
           />
+        </div>
+
+        <div className="flex items-center space-x-4 py-3 px-4 bg-slate-800/30 rounded-xl border border-slate-600/30">
+          <Switch
+            id="performance-mode"
+            checked={performanceMode}
+            onCheckedChange={handlePerformanceModeChange}
+            className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-green-500 data-[state=checked]:to-emerald-500"
+          />
+          <Label htmlFor="performance-mode" className="text-white font-medium tracking-wide">
+            High Performance Mode (Disable Interpolation)
+          </Label>
         </div>
       </div>
     </Card>

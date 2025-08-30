@@ -25,7 +25,8 @@ export function useSnakeGameState() {
   const [showPerformanceOptions, setShowPerformanceOptions] = useState<boolean>(false);
   const [graphicsQuality, setGraphicsQuality] = useState<'low' | 'medium' | 'high'>('low');
   const [hideBackground, setHideBackground] = useState<boolean>(false);
-  const [gameSpeed, setGameSpeed] = useState<number>(0.5); // Changed default from 1 to 0.5
+  const [gameSpeed, setGameSpeed] = useState<number>(1.5); // Optimized default for smoother gameplay
+  const [performanceMode, setPerformanceMode] = useState<boolean>(false);
 
   const togglePlayerMode = () => {
     setGameOver(false);
@@ -93,6 +94,11 @@ export function useSnakeGameState() {
     setGameKey(prev => prev + 1);
   };
 
+  const handlePerformanceModeChange = (enabled: boolean) => {
+    setPerformanceMode(enabled);
+    setGameKey(prev => prev + 1);
+  };
+
   const togglePerformanceOptions = () => {
     setShowPerformanceOptions(!showPerformanceOptions);
   };
@@ -115,6 +121,7 @@ export function useSnakeGameState() {
     graphicsQuality,
     hideBackground,
     gameSpeed,
+    performanceMode,
     togglePlayerMode,
     restartGame,
     handleStatsUpdate,
@@ -124,6 +131,7 @@ export function useSnakeGameState() {
     handleSnakeCountChange,
     handleHideBackgroundChange,
     handleGameSpeedChange,
+    handlePerformanceModeChange,
     togglePerformanceOptions
   };
 }

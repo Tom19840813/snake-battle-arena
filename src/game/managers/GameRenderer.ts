@@ -31,18 +31,13 @@ export class GameRenderer extends BaseRenderer {
   }
 
   drawWithInterpolation(snakes: any[], food: Position[], powerUps: Position[], powerUpTypes: string[]) {
-    // Use hardware-accelerated clearing
+    // Optimized clearing with minimal operations
     this.clearCanvas();
-    
-    // Enable anti-aliasing for smoother visuals
-    this.enableAntiAliasing();
 
     // Draw all game elements using specialized renderers
     this.gridRenderer.drawGrid();
     this.itemRenderer.drawFood(food);
     this.itemRenderer.drawPowerUps(powerUps, powerUpTypes);
     this.snakeRenderer.drawSnakes(snakes);
-    
-    this.disableAntiAliasing();
   }
 }

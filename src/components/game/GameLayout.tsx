@@ -35,7 +35,9 @@ interface GameLayoutProps {
   onSnakeCountChange: (count: number) => void;
   onHideBackgroundChange: (hide: boolean) => void;
   onGameSpeedChange: (speed: number) => void;
+  onPerformanceModeChange?: (enabled: boolean) => void;
   gameSpeed: number;
+  performanceMode?: boolean;
 }
 
 export function GameLayout({
@@ -60,7 +62,9 @@ export function GameLayout({
   onSnakeCountChange,
   onHideBackgroundChange,
   onGameSpeedChange,
-  gameSpeed
+  onPerformanceModeChange,
+  gameSpeed,
+  performanceMode
 }: GameLayoutProps) {
   return (
     <div className="grid lg:grid-cols-[1fr,300px] gap-6">
@@ -77,6 +81,7 @@ export function GameLayout({
         onRestartGame={onRestartGame}
         onSkinChange={onSkinChange}
         gameSpeed={gameSpeed}
+        performanceMode={performanceMode}
       />
 
       <div className="space-y-4">
@@ -104,6 +109,7 @@ export function GameLayout({
             onSnakeCountChange={onSnakeCountChange}
             onHideBackgroundChange={onHideBackgroundChange}
             onGameSpeedChange={onGameSpeedChange}
+            onPerformanceModeChange={onPerformanceModeChange}
           />
         )}
       </div>

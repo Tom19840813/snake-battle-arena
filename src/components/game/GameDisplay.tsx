@@ -10,6 +10,7 @@ interface GameDisplayProps {
   activeSkin: string;
   onStatsUpdate: (stats: any) => void;
   gameSpeed?: number;
+  performanceMode?: boolean;
   onGameBoardReady: (gameBoard: any) => void;
 }
 
@@ -20,7 +21,8 @@ export function GameDisplay({
   difficulty,
   activeSkin,
   onStatsUpdate,
-  gameSpeed = 0.5,
+  gameSpeed = 1.5,
+  performanceMode = false,
   onGameBoardReady
 }: GameDisplayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -65,8 +67,9 @@ export function GameDisplay({
           gameRef.current.setPlayerSkin(activeSkin);
         }
         
-        // Set game speed
+        // Set game speed and performance mode
         gameRef.current.setGameSpeed(gameSpeed);
+        gameRef.current.setPerformanceMode(performanceMode);
         
         // Start the game
         gameRef.current.start();
@@ -120,6 +123,13 @@ export function GameDisplay({
       gameRef.current.setGameSpeed(gameSpeed);
     }
   }, [gameSpeed]);
+
+  // Handle performance mode changes
+  useEffect(() => {
+    if (gameRef.current) {
+      gameRef.current.setPerformanceMode(performanceMode);
+    }
+  }, [performanceMode]);
 
   return (
     <div 

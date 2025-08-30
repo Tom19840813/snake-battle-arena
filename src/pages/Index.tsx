@@ -29,6 +29,7 @@ const Index = () => {
     graphicsQuality,
     hideBackground,
     gameSpeed,
+    performanceMode,
     togglePlayerMode,
     restartGame,
     handleStatsUpdate,
@@ -38,6 +39,7 @@ const Index = () => {
     handleSnakeCountChange,
     handleHideBackgroundChange,
     handleGameSpeedChange,
+    handlePerformanceModeChange,
     togglePerformanceOptions
   } = useSnakeGameState();
 
@@ -82,7 +84,9 @@ const Index = () => {
             onSnakeCountChange={handleSnakeCountChange}
             onHideBackgroundChange={handleHideBackgroundChange}
             onGameSpeedChange={handleGameSpeedChange}
+            onPerformanceModeChange={handlePerformanceModeChange}
             gameSpeed={gameSpeed}
+            performanceMode={performanceMode}
           />
         </div>
       </div>

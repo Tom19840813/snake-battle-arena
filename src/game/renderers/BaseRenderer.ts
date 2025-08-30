@@ -9,9 +9,8 @@ export class BaseRenderer {
     this.gridSize = gridSize;
     this.cellSize = ctx.canvas.width / gridSize;
     
-    // Enable hardware acceleration hints
-    this.ctx.imageSmoothingEnabled = true;
-    this.ctx.imageSmoothingQuality = 'high';
+    // Optimized rendering settings for performance
+    this.ctx.imageSmoothingEnabled = false; // Disable for pixel-perfect rendering
   }
 
   updateCellSize() {
@@ -28,7 +27,10 @@ export class BaseRenderer {
   }
 
   protected clearCanvas() {
-    const { width, height } = this.ctx.canvas;
-    this.ctx.clearRect(0, 0, width, height);
+    // Optimized canvas clearing
+    this.ctx.save();
+    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+    this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
+    this.ctx.restore();
   }
 }
